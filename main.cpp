@@ -98,6 +98,7 @@ int main() {
                     }
                 }
 
+
                 if (ch == '\n' || ch == '\r') {
                     game.startSimulation();
                 }
@@ -112,6 +113,16 @@ int main() {
 
             std::this_thread::sleep_for(std::chrono::milliseconds(50)); // update physics every 50ms
         }
+
+        if (game.getPhase() == GamePhase::WIN || game.getPhase() == GamePhase::LOSE) {
+            if (ch == 'r' || ch == 'R') {
+                game.reset();
+            }
+            if (ch == '\n' || ch == '\r') {
+                game.reset();
+            }
+        }
+
         renderGame(render, game, cursor);
         std::this_thread::sleep_for(std::chrono::milliseconds(20)); // update render every 20ms
     }
