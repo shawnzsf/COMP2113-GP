@@ -1,0 +1,21 @@
+# Compiled binaries
+game
+game.exe
+*.o
+*.obj
+
+# IDE
+.vscode/
+.claude/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.a
+*.so
+*.dll
