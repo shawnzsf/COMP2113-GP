@@ -55,8 +55,20 @@ private:
     static constexpr int COLLISION_RADIUS = 1;
     static constexpr int POINTS_PER_ENEMY = 10;
     static constexpr int SHOOT_COOLDOWN = 6;  // Frames between shots
+    static constexpr int INPUT_HOLD_FRAMES = 6;  // Keep a direction active briefly after the last event
     int shoot_cooldown = 0;
-    
+
+    // Input state
+    bool move_left = false;
+    bool move_right = false;
+    bool move_up = false;
+    bool move_down = false;
+    int move_left_timer = 0;
+    int move_right_timer = 0;
+    int move_up_timer = 0;
+    int move_down_timer = 0;
+    bool shoot_requested = false;
+
     // Private methods
     void MoveEnemies();
     void MoveBullets();
