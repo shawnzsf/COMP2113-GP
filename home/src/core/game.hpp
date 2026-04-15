@@ -1,23 +1,9 @@
 #pragma once
 #include "ftxui/dom/canvas.hpp"
 #include "ftxui/component/event.hpp"
+#include "../entities/enemy.hpp"
 #include <vector>
 #include <string>
-
-struct Position {
-    int x;
-    int y;
-};
-
-struct Bullet {
-    Position pos;
-    bool active = true;
-};
-
-struct Enemy {
-    Position pos;
-    bool alive = true;
-};
 
 class Game {
 public:
@@ -53,7 +39,9 @@ private:
     static constexpr int ENEMY_DESCENT_INTERVAL = 30;
     static constexpr int ENEMY_SPAWN_COUNT = 10;
     static constexpr int COLLISION_RADIUS = 1;
-    static constexpr int POINTS_PER_ENEMY = 10;
+    static constexpr int POINTS_REGULAR_ENEMY = 10;
+    static constexpr int POINTS_ELITE_ENEMY = 30;
+    static constexpr int POINTS_BOSS_ENEMY = 100;
     static constexpr int SHOOT_COOLDOWN = 6;  // Frames between shots
     static constexpr int INPUT_HOLD_FRAMES = 6;  // Keep a direction active briefly after the last event
     int shoot_cooldown = 0;

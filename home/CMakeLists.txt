@@ -14,6 +14,7 @@ add_executable(Shooter_game
     src/core/main.cpp
     src/core/game.cpp
     src/data/highscore.cpp
+    src/entities/enemy.cpp
 )
 
 target_link_libraries(Shooter_game PRIVATE

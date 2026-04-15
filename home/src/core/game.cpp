@@ -2,8 +2,11 @@
 #include "ftxui/dom/elements.hpp"
 #include "ftxui/component/event.hpp"
 #include <algorithm>
+#include <cstdlib>
+#include <ctime>
 
 Game::Game() {
+    srand(time(nullptr));  // Initialize random seed
     player_pos = {WIDTH / 2, HEIGHT - 3};
     SpawnEnemies();
 }
@@ -13,13 +16,31 @@ void Game::SpawnEnemies() {
     // Spawn enemies in a grid pattern, with difficulty based on wave
     int enemy_count = ENEMY_SPAWN_COUNT + (wave - 1) * 2;  // More enemies per wave
     int start_x = (WIDTH - (enemy_count * 6)) / 2;  // Center the formation
-    
+
+    // Enemy type probabilities (higher wave = more elite/boss enemies)
+    int boss_chance = std::min(5 + wave, 15);     // 5% base, up to 15%
+    int elite_chance = std::min(10 + wave * 2, 30); // 10% base, up to 30%
+    // Regular enemies get the remainder
+
     for (int i = 0; i < enemy_count && i < 20; ++i) {  // Cap at 20 enemies
-        Enemy e;
-        e.pos.x = start_x + (i * 6);
-        e.pos.y = 3 + (i / 5) * 3;  // Multiple rows
-        e.alive = true;
-        enemies.push_back(e);
+        Position pos = {start_x + (i * 6), 3 + (i / 5) * 3};  // Multiple rows
+
+        // Determine enemy type based on random chance
+        int rand_val = rand() % 100;
+
+        Enemy enemy;
+        if (rand_val < boss_chance) {
+            // Boss enemy (least frequent)
+            enemy = CreateBossEnemy(pos);
+        } else if (rand_val < boss_chance + elite_chance) {
+            // Elite enemy (medium frequency)
+            enemy = CreateEliteEnemy(pos);
+        } else {
+            // Regular enemy (most frequent)
+            enemy = CreateRegularEnemy(pos);
+        }
+
+        enemies.push_back(enemy);
     }
 }
 
@@ -162,16 +183,16 @@ void Game::MoveBullets() {
 }
 
 void Game::MoveEnemies() {
-    // Simple left-right movement with direction reversal at boundaries
+    // Handle formation movement for regular enemies
     static int direction = 1;
-    
+
     if (frame_count % ENEMY_MOVE_INTERVAL == 0) {
         bool edge_reached = false;
-        
-        // Check if any alive enemy reached the edge
+
+        // Check if any alive regular enemy reached the edge
         for (const auto& e : enemies) {
-            if (e.alive) {
-                if ((direction > 0 && e.pos.x >= WIDTH - 6) || 
+            if (e.IsAlive() && e.type == EnemyType::REGULAR) {
+                if ((direction > 0 && e.pos.x >= WIDTH - 6) ||
                     (direction < 0 && e.pos.x <= 4)) {
                     edge_reached = true;
                     break;
@@ -180,21 +201,26 @@ void Game::MoveEnemies() {
         }
 
         if (edge_reached) {
-            // Reverse direction and descend slightly
+            // Reverse direction and descend slightly for regular enemies
             direction = -direction;
             for (auto& e : enemies) {
-                if (e.alive) {
+                if (e.IsAlive() && e.type == EnemyType::REGULAR) {
                     e.pos.y += 2;  // Descend when hitting edge
                 }
             }
         } else {
-            // Move in current direction
+            // Move regular enemies in current direction
             for (auto& e : enemies) {
-                if (e.alive) {
+                if (e.IsAlive() && e.type == EnemyType::REGULAR) {
                     e.pos.x += direction * ENEMY_MOVE_SPEED;
                 }
             }
         }
+    }
+
+    // Update all enemies (this handles individual movement for elite/boss, and any other updates)
+    for (auto& e : enemies) {
+        e.Update();
     }
 }
 
@@ -203,14 +229,46 @@ void Game::CheckCollisions() {
         if (!b.active) continue;
 
         for (auto& e : enemies) {
-            if (e.alive && 
-                std::abs(b.pos.x - e.pos.x) <= COLLISION_RADIUS && 
+            if (e.IsAlive() &&
+                std::abs(b.pos.x - e.pos.x) <= COLLISION_RADIUS &&
                 std::abs(b.pos.y - e.pos.y) <= COLLISION_RADIUS) {
-                
-                e.alive = false;
+
+                // Deal damage to enemy
+                e.TakeDamage(1);
                 b.active = false;
-                score += POINTS_PER_ENEMY;
+
+                // Award points only if enemy is destroyed
+                if (!e.IsAlive()) {
+                    switch (e.type) {
+                        case EnemyType::REGULAR:
+                            score += POINTS_REGULAR_ENEMY;
+                            break;
+                        case EnemyType::ELITE:
+                            score += POINTS_ELITE_ENEMY;
+                            break;
+                        case EnemyType::BOSS:
+                            score += POINTS_BOSS_ENEMY;
+                            break;
+                    }
+                }
+
                 break;  // Bullet only hits one enemy
+            }
+        }
+    }
+
+    // Check collisions between boss bullets and player
+    for (auto& e : enemies) {
+        if (e.type == EnemyType::BOSS) {
+            for (const auto& boss_bullet : e.bullets) {
+                if (boss_bullet.active &&
+                    std::abs(boss_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
+                    std::abs(boss_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
+
+                    // Player hit by boss bullet - game over
+                    game_over = true;
+                    return;
+                }
             }
         }
     }
@@ -220,12 +278,12 @@ void Game::UpdateWave() {
     // Check if all enemies are defeated
     bool all_defeated = true;
     for (const auto& e : enemies) {
-        if (e.alive) {
+        if (e.IsAlive()) {
             all_defeated = false;
             break;
         }
     }
-    
+
     if (all_defeated && !enemies.empty()) {
         wave++;
         SpawnEnemies();
@@ -255,9 +313,7 @@ void Game::Draw(ftxui::Canvas& canvas) {
 
     // Draw Enemies
     for (const auto& e : enemies) {
-        if (e.alive) {
-            canvas.DrawText(e.pos.x, e.pos.y, "▼", ftxui::Color::Red);
-        }
+        e.Draw(canvas);
     }
 
     // Draw Player Bullets
@@ -272,7 +328,7 @@ void Game::Draw(ftxui::Canvas& canvas) {
     std::string wave_text = "Wave: " + std::to_string(wave);
     std::string enemies_text = "Enemies: " + std::to_string(
         std::count_if(enemies.begin(), enemies.end(), 
-            [](const Enemy& e) { return e.alive; })
+            [](const Enemy& e) { return e.IsAlive(); })
     );
     
     canvas.DrawText(2, 1, score_text, ftxui::Color::Green);
