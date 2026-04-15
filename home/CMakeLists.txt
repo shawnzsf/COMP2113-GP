@@ -13,6 +13,7 @@ add_subdirectory(thirdparty/ftxui)
 add_executable(Shooter_game
     src/core/main.cpp
     src/core/game.cpp
+    src/data/highscore.cpp
 )
 
 target_link_libraries(Shooter_game PRIVATE
