@@ -3,6 +3,7 @@ game
 game.exe
 *.o
 *.obj
+/home/build/
 
 # IDE
 .vscode/
@@ -19,3 +20,29 @@ Thumbs.db
 *.a
 *.so
 *.dll
+
+# CMake build directories and files
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# Qt Creator
+CMakeLists.txt.user*
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# CLion
+.idea/
+
+# Temporary files
+*~
+*.tmp
+*.bak

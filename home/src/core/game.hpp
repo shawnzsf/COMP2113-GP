@@ -46,7 +46,7 @@ private:
     bool game_over = false;
     
     // Game constants
-    static constexpr int PLAYER_MOVE_SPEED = 3;
+    static constexpr int PLAYER_MOVE_SPEED = 1;  // Smaller steps for smoother feel
     static constexpr int BULLET_MOVE_SPEED = 2;
     static constexpr int ENEMY_MOVE_SPEED = 1;
     static constexpr int ENEMY_MOVE_INTERVAL = 15;
@@ -54,6 +54,8 @@ private:
     static constexpr int ENEMY_SPAWN_COUNT = 10;
     static constexpr int COLLISION_RADIUS = 1;
     static constexpr int POINTS_PER_ENEMY = 10;
+    static constexpr int SHOOT_COOLDOWN = 6;  // Frames between shots
+    int shoot_cooldown = 0;
     
     // Private methods
     void MoveEnemies();

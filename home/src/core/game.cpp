@@ -25,38 +25,59 @@ void Game::SpawnEnemies() {
 
 bool Game::HandleEvent(const ftxui::Event& event) {
     if (game_over) {
-        return event == ftxui::Event::Character('q') || 
+        return event == ftxui::Event::Character('q') ||
                event == ftxui::Event::Character('Q');
     }
 
-    // Player movement - prevent going out of bounds
-    if (event == ftxui::Event::ArrowLeft || event == ftxui::Event::Character('a') || 
+    bool handled = false;
+
+    // Handle movement - allow multiple directions simultaneously
+    if (event == ftxui::Event::ArrowLeft || event == ftxui::Event::Character('a') ||
         event == ftxui::Event::Character('A')) {
         if (player_pos.x > 2) {
             player_pos.x -= PLAYER_MOVE_SPEED;
         }
-        return true;
+        handled = true;
     }
-    
-    if (event == ftxui::Event::ArrowRight || event == ftxui::Event::Character('d') || 
+
+    if (event == ftxui::Event::ArrowRight || event == ftxui::Event::Character('d') ||
         event == ftxui::Event::Character('D')) {
         if (player_pos.x < WIDTH - 5) {
             player_pos.x += PLAYER_MOVE_SPEED;
         }
-        return true;
+        handled = true;
     }
 
-    // Shooting
+    if (event == ftxui::Event::ArrowUp || event == ftxui::Event::Character('w') ||
+        event == ftxui::Event::Character('W')) {
+        if (player_pos.y > 2) {
+            player_pos.y -= PLAYER_MOVE_SPEED;
+        }
+        handled = true;
+    }
+
+    if (event == ftxui::Event::ArrowDown || event == ftxui::Event::Character('s') ||
+        event == ftxui::Event::Character('S')) {
+        if (player_pos.y < HEIGHT - 5) {
+            player_pos.y += PLAYER_MOVE_SPEED;
+        }
+        handled = true;
+    }
+
+    // Handle shooting with cooldown
     if (event == ftxui::Event::Character(' ')) {
-        Bullet b;
-        b.pos.x = player_pos.x + 1;  // Center of player ship
-        b.pos.y = player_pos.y - 1;
-        b.active = true;
-        player_bullets.push_back(b);
-        return true;
+        if (shoot_cooldown <= 0) {
+            Bullet b;
+            b.pos.x = player_pos.x + 1;  // Center of player ship
+            b.pos.y = player_pos.y - 1;
+            b.active = true;
+            player_bullets.push_back(b);
+            shoot_cooldown = SHOOT_COOLDOWN;
+        }
+        handled = true;
     }
 
-    return false;
+    return handled;
 }
 
 void Game::Update() {
@@ -64,12 +85,17 @@ void Game::Update() {
 
     frame_count++;
 
+    // Update shoot cooldown
+    if (shoot_cooldown > 0) {
+        shoot_cooldown--;
+    }
+
     // Update game logic
     MoveBullets();
     MoveEnemies();
     CheckCollisions();
     UpdateWave();
-    
+
     // Enemy descent (independent of movement)
     if (frame_count % ENEMY_DESCENT_INTERVAL == 0) {
         for (auto& e : enemies) {
@@ -77,9 +103,9 @@ void Game::Update() {
         }
     }
 
-    // Check game over conditions
+    // Check game over conditions - enemies reach near player level
     for (const auto& e : enemies) {
-        if (e.alive && e.pos.y >= HEIGHT - 4) {
+        if (e.alive && e.pos.y >= HEIGHT - 15) {  // More lenient condition
             game_over = true;
             break;
         }
@@ -193,9 +219,9 @@ void Game::Draw(ftxui::Canvas& canvas) {
     // canvas.DrawText(0, HEIGHT - 1, "└", ftxui::Color::White);
     // canvas.DrawText(WIDTH - 1, HEIGHT - 1, "┘", ftxui::Color::White);
 
-    // Draw Player (ship)
+    // Draw Player (ship that can move in all directions)
     canvas.DrawText(player_pos.x, player_pos.y, "▲", ftxui::Color::Cyan);
-    canvas.DrawText(player_pos.x - 1, player_pos.y + 1, "◀ ▶", ftxui::Color::Cyan);
+    canvas.DrawText(player_pos.x - 1, player_pos.y + 1, "██", ftxui::Color::Cyan);  // Wider base
 
     // Draw Enemies
     for (const auto& e : enemies) {
