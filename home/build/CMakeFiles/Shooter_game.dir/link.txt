@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/Shooter_game.dir/src/core/main.cpp.o CMakeFiles/Shooter_game.dir/src/core/game.cpp.o -o Shooter_game  thirdparty/ftxui/libftxui-screen.a thirdparty/ftxui/libftxui-dom.a thirdparty/ftxui/libftxui-component.a thirdparty/ftxui/libftxui-dom.a thirdparty/ftxui/libftxui-screen.a 
