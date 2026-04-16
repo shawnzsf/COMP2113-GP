@@ -85,7 +85,7 @@ bool Game::HandleEvent(const ftxui::Event& event) {
 
     // Handle shooting with cooldown
     if (event == ftxui::Event::Character(' ')) {
-        shoot_requested = true;
+        shoot_hold_timer = SHOOT_HOLD_FRAMES;
         handled = true;
     }
 
@@ -97,9 +97,12 @@ void Game::Update() {
 
     frame_count++;
 
-    // Update shoot cooldown
+    // Update shoot cooldown and shooting hold timer
     if (shoot_cooldown > 0) {
         shoot_cooldown--;
+    }
+    if (shoot_hold_timer > 0) {
+        shoot_hold_timer--;
     }
 
     // Apply input state for movement
@@ -124,11 +127,10 @@ void Game::Update() {
         move_down = move_down_timer > 0;
     }
 
-    // Apply shooting state
-    if (shoot_requested && shoot_cooldown <= 0) {
+    // Apply shooting state independently of movement
+    if (shoot_hold_timer > 0 && shoot_cooldown <= 0) {
         FireWeapon();
         shoot_cooldown = SHOOT_COOLDOWN;
-        shoot_requested = false;
     }
 
     // Update game logic
