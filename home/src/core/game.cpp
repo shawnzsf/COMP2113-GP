@@ -4,10 +4,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
 
 Game::Game() {
     srand(time(nullptr));  // Initialize random seed
-    player_pos = {WIDTH / 2, HEIGHT - 3};
+    player.SetBounds(WIDTH, HEIGHT);
+    player.SetPosition(WIDTH / 2, HEIGHT - 3);
     SpawnEnemies();
 }
 
@@ -102,41 +104,29 @@ void Game::Update() {
 
     // Apply input state for movement
     if (move_left_timer > 0) {
-        if (player_pos.x > 2) {
-            player_pos.x -= PLAYER_MOVE_SPEED;
-        }
+        player.MoveLeft();
         move_left_timer--;
         move_left = move_left_timer > 0;
     }
     if (move_right_timer > 0) {
-        if (player_pos.x < WIDTH - 5) {
-            player_pos.x += PLAYER_MOVE_SPEED;
-        }
+        player.MoveRight();
         move_right_timer--;
         move_right = move_right_timer > 0;
     }
     if (move_up_timer > 0) {
-        if (player_pos.y > 2) {
-            player_pos.y -= PLAYER_MOVE_SPEED;
-        }
+        player.MoveUp();
         move_up_timer--;
         move_up = move_up_timer > 0;
     }
     if (move_down_timer > 0) {
-        if (player_pos.y < HEIGHT - 5) {
-            player_pos.y += PLAYER_MOVE_SPEED;
-        }
+        player.MoveDown();
         move_down_timer--;
         move_down = move_down_timer > 0;
     }
 
     // Apply shooting state
     if (shoot_requested && shoot_cooldown <= 0) {
-        Bullet b;
-        b.pos.x = player_pos.x + 1;  // Center of player ship
-        b.pos.y = player_pos.y - 1;
-        b.active = true;
-        player_bullets.push_back(b);
+        FireWeapon();
         shoot_cooldown = SHOOT_COOLDOWN;
         shoot_requested = false;
     }
@@ -164,15 +154,31 @@ void Game::Update() {
 }
 
 void Game::MoveBullets() {
+    std::vector<Bullet> spawned_fragments;
+
     for (auto& b : player_bullets) {
-        if (b.active) {
-            b.pos.y -= BULLET_MOVE_SPEED;
-            // Mark as inactive if out of bounds
-            if (b.pos.y < 1) {
+        if (!b.active) continue;
+
+        b.pos.x += b.dx;
+        b.pos.y += b.dy;
+
+        // Explosive bullets now explode on impact, not on timer
+        // Remove the timer-based explosion logic
+
+        if (b.type == BulletType::FRAGMENT) {
+            b.lifetime--;
+            if (b.lifetime <= 0) {
                 b.active = false;
             }
         }
+
+        if (b.pos.y < 1 || b.pos.y >= HEIGHT - 1 || b.pos.x < 1 || b.pos.x >= WIDTH - 1) {
+            b.active = false;
+        }
     }
+
+    // Add explosion fragments after the main pass
+    player_bullets.insert(player_bullets.end(), spawned_fragments.begin(), spawned_fragments.end());
 
     // Remove inactive bullets to save memory
     player_bullets.erase(
@@ -180,6 +186,80 @@ void Game::MoveBullets() {
             [](const Bullet& b) { return !b.active; }),
         player_bullets.end()
     );
+}
+
+void Game::FireWeapon() {
+    Position player_pos = player.GetPosition();
+
+    if (weapon_type == WeaponType::BASIC) {
+        Bullet b;
+        b.active = true;
+        b.pos = {player_pos.x + 1, player_pos.y - 1};
+        b.dx = 0;
+        b.dy = -1;
+        b.type = BulletType::NORMAL;
+        player_bullets.push_back(b);
+        return;
+    }
+
+    if (weapon_type == WeaponType::DUAL) {
+        Bullet left;
+        left.active = true;
+        left.pos = {player_pos.x, player_pos.y - 1};
+        left.dx = -1;
+        left.dy = -1;
+        left.type = BulletType::NORMAL;
+
+        Bullet right;
+        right.active = true;
+        right.pos = {player_pos.x + 2, player_pos.y - 1};
+        right.dx = 1;
+        right.dy = -1;
+        right.type = BulletType::NORMAL;
+
+        player_bullets.push_back(left);
+        player_bullets.push_back(right);
+        return;
+    }
+
+    if (weapon_type == WeaponType::TRI) {
+        Bullet center;
+        center.active = true;
+        center.pos = {player_pos.x + 1, player_pos.y - 1};
+        center.dx = 0;
+        center.dy = -1;
+        center.type = BulletType::NORMAL;
+
+        Bullet left;
+        left.active = true;
+        left.pos = {player_pos.x, player_pos.y - 1};
+        left.dx = -1;
+        left.dy = -1;
+        left.type = BulletType::NORMAL;
+
+        Bullet right;
+        right.active = true;
+        right.pos = {player_pos.x + 2, player_pos.y - 1};
+        right.dx = 1;
+        right.dy = -1;
+        right.type = BulletType::NORMAL;
+
+        player_bullets.push_back(center);
+        player_bullets.push_back(left);
+        player_bullets.push_back(right);
+        return;
+    }
+
+    if (weapon_type == WeaponType::EXPLOSIVE) {
+        Bullet orb;
+        orb.active = true;
+        orb.pos = {player_pos.x + 1, player_pos.y - 1};
+        orb.dx = 0;
+        orb.dy = -1;
+        orb.type = BulletType::EXPLOSIVE;
+        player_bullets.push_back(orb);
+        return;
+    }
 }
 
 void Game::MoveEnemies() {
@@ -235,19 +315,44 @@ void Game::CheckCollisions() {
 
                 // Deal damage to enemy
                 e.TakeDamage(1);
+
+                // Handle explosive bullets - they explode on impact
+                if (b.type == BulletType::EXPLOSIVE) {
+                    // Spawn explosion fragments in 8 directions
+                    const std::vector<std::pair<int, int>> directions = {
+                        {-1, -1}, {0, -1}, {1, -1},
+                        {-1, 0},           {1, 0},
+                        {-1, 1},  {0, 1},  {1, 1}
+                    };
+
+                    for (const auto& dir : directions) {
+                        Bullet fragment;
+                        fragment.type = BulletType::FRAGMENT;
+                        fragment.active = true;
+                        fragment.pos = b.pos;
+                        fragment.dx = dir.first;
+                        fragment.dy = dir.second;
+                        fragment.lifetime = 30; // lasts about half a second
+                        player_bullets.push_back(fragment);
+                    }
+                }
+
                 b.active = false;
 
-                // Award points only if enemy is destroyed
+                // Award points and cash only if enemy is destroyed
                 if (!e.IsAlive()) {
                     switch (e.type) {
                         case EnemyType::REGULAR:
                             score += POINTS_REGULAR_ENEMY;
+                            cash += 5;
                             break;
                         case EnemyType::ELITE:
                             score += POINTS_ELITE_ENEMY;
+                            cash += 15;
                             break;
                         case EnemyType::BOSS:
                             score += POINTS_BOSS_ENEMY;
+                            cash += 50;
                             break;
                     }
                 }
@@ -261,13 +366,20 @@ void Game::CheckCollisions() {
     for (auto& e : enemies) {
         if (e.type == EnemyType::BOSS) {
             for (const auto& boss_bullet : e.bullets) {
-                if (boss_bullet.active &&
-                    std::abs(boss_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
-                    std::abs(boss_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
+                if (boss_bullet.active) {
+                    Position player_pos = player.GetPosition();
+                    if (std::abs(boss_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
+                        std::abs(boss_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
 
-                    // Player hit by boss bullet - game over
-                    game_over = true;
-                    return;
+                        // Player takes damage (shield will absorb if active)
+                        player.TakeDamage(1);
+
+                        // Check if player is still alive
+                        if (!player.IsAlive()) {
+                            game_over = true;
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -307,9 +419,8 @@ void Game::Draw(ftxui::Canvas& canvas) {
     // canvas.DrawText(0, HEIGHT - 1, "└", ftxui::Color::White);
     // canvas.DrawText(WIDTH - 1, HEIGHT - 1, "┘", ftxui::Color::White);
 
-    // Draw Player (ship that can move in all directions)
-    canvas.DrawText(player_pos.x, player_pos.y, "▲", ftxui::Color::Cyan);
-    // canvas.DrawText(player_pos.x - 1, player_pos.y + 1, "██", ftxui::Color::Cyan);  // Wider base
+    // Draw Player
+    player.Draw(canvas);
 
     // Draw Enemies
     for (const auto& e : enemies) {
@@ -319,27 +430,31 @@ void Game::Draw(ftxui::Canvas& canvas) {
     // Draw Player Bullets
     for (const auto& b : player_bullets) {
         if (b.active) {
-            canvas.DrawText(b.pos.x, b.pos.y, "•", ftxui::Color::Yellow);
+            std::string symbol = (b.type == BulletType::EXPLOSIVE) ? "@" : "•";
+            if (b.type == BulletType::FRAGMENT) symbol = ".";
+            canvas.DrawText(b.pos.x, b.pos.y, symbol, ftxui::Color::Yellow);
         }
     }
 
-    // Draw HUD (Score and Wave)
+    // Draw HUD (Score, Cash, and Wave)
     std::string score_text = "Score: " + std::to_string(score);
+    std::string cash_text = "Cash: $" + std::to_string(cash);
     std::string wave_text = "Wave: " + std::to_string(wave);
     std::string enemies_text = "Enemies: " + std::to_string(
         std::count_if(enemies.begin(), enemies.end(), 
             [](const Enemy& e) { return e.IsAlive(); })
     );
     
-    canvas.DrawText(2, 1, score_text, ftxui::Color::Green);
+    canvas.DrawText(2, 1, score_text, ftxui::Color::Yellow);
+    canvas.DrawText(2, 5, cash_text, ftxui::Color::Green);
     canvas.DrawText(WIDTH / 2 - 8, 1, wave_text, ftxui::Color::Cyan);
-    canvas.DrawText(WIDTH - 20, 1, enemies_text, ftxui::Color::Magenta);
+    canvas.DrawText(WIDTH - 30, 1, enemies_text, ftxui::Color::Magenta);
 
     // Draw game over message
     if (game_over) {
         canvas.DrawText(WIDTH / 2 - 5, HEIGHT / 2, "GAME OVER", ftxui::Color::Red);
-        canvas.DrawText(WIDTH / 2 - 8, HEIGHT / 2 + 2, "Final Score: " + std::to_string(score), ftxui::Color::White);
-        canvas.DrawText(WIDTH / 2 - 7, HEIGHT / 2 + 4, "Press Q to quit", ftxui::Color::Yellow);
+        canvas.DrawText(WIDTH / 2 - 8, HEIGHT / 2 + 4, "Final Score: " + std::to_string(score), ftxui::Color::White);
+        canvas.DrawText(WIDTH / 2 - 7, HEIGHT / 2 + 8, "Press Q to quit", ftxui::Color::Yellow);
     }
 }
 
@@ -353,4 +468,38 @@ int Game::GetScore() const {
 
 int Game::GetWave() const {
     return wave;
+}
+
+bool Game::CanAfford(int amount) const {
+    return cash >= amount;
+}
+
+bool Game::BuyWeapon(WeaponType type, int cost) {
+    if (type == weapon_type || !CanAfford(cost)) {
+        return false;
+    }
+    cash -= cost;
+    weapon_type = type;
+    return true;
+}
+
+bool Game::BuyShield(int cost) {
+    if (player.HasShield() || !CanAfford(cost)) {
+        return false;
+    }
+    cash -= cost;
+    player.ActivateShield();
+    return true;
+}
+
+int Game::GetCash() const {
+    return cash;
+}
+
+WeaponType Game::GetWeaponType() const {
+    return weapon_type;
+}
+
+bool Game::HasShield() const {
+    return player.HasShield();
 }

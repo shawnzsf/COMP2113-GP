@@ -25,6 +25,15 @@ int main() {
     GameState current_state = GameState::MainMenu;
     int selected_menu_item = 0;
     std::string player_name = "Player";
+    bool paused = false;
+    int shop_selected_item = 0;
+    const std::vector<std::string> shop_items = {
+        "Dual Shot - $50",
+        "Tri Shot - $100",
+        "Explosive Orb - $150",
+        "Shield - $75",
+        "Resume"
+    };
 
     auto screen = ScreenInteractive::Fullscreen();
 
@@ -87,7 +96,38 @@ int main() {
 
         Element game_display = canvas(c) | border | color(Color::White);
 
-        if (game.IsGameOver()) {
+        if (paused) {
+            Elements shop_lines;
+            shop_lines.push_back(text("SHOP MENU") | bold | color(Color::Yellow) | center);
+            shop_lines.push_back(text("Cash: $" + std::to_string(game.GetCash())) | color(Color::Green) | center);
+            shop_lines.push_back(text("Current Weapon: " + std::string(
+                game.GetWeaponType() == WeaponType::BASIC ? "Basic" :
+                game.GetWeaponType() == WeaponType::DUAL ? "Dual" :
+                game.GetWeaponType() == WeaponType::TRI ? "Tri" : "Explosive"
+            )) | color(Color::White) | center);
+            shop_lines.push_back(text("Shield: " + std::string(game.HasShield() ? "Owned" : "Available")) | color(Color::White) | center);
+            shop_lines.push_back(separator());
+
+            for (size_t i = 0; i < shop_items.size(); ++i) {
+                auto item_text = text((static_cast<int>(i) == shop_selected_item ? "> " : "  ") + shop_items[i]);
+                if (static_cast<int>(i) == shop_selected_item) {
+                    item_text = item_text | color(Color::Yellow) | bold;
+                } else {
+                    item_text = item_text | color(Color::White);
+                }
+                shop_lines.push_back(item_text);
+            }
+
+            shop_lines.push_back(text("") );
+            shop_lines.push_back(text("Use ↑↓ to select, Enter to buy/resume, P to close") | color(Color::GrayLight) | center);
+
+            auto shop_box = vbox(std::move(shop_lines)) | border | color(Color::Green);
+            game_display = vbox({
+                game_display,
+                separator(),
+                shop_box,
+            });
+        } else if (game.IsGameOver()) {
             game_display = dbox({
                 game_display,
                 filler() | size(HEIGHT, EQUAL, 1),
@@ -127,6 +167,8 @@ int main() {
                 if (event == Event::Return) {
                     if (selected_menu_item == 0) { // Start Game
                         current_state = GameState::Playing;
+                        paused = false;
+                        shop_selected_item = 0;
                         game = Game(); // Reset game
                     } else if (selected_menu_item == 1) { // Scoreboard
                         current_state = GameState::Scoreboard;
@@ -143,12 +185,54 @@ int main() {
             case GameState::Scoreboard: {
                 if (event == Event::Escape) {
                     current_state = GameState::MainMenu;
+                    paused = false;
                     return true;
                 }
                 break;
             }
 
             case GameState::Playing: {
+                if (event == Event::Character('p') || event == Event::Character('P')) {
+                    paused = !paused;
+                    return true;
+                }
+
+                if (paused) {
+                    if (event == Event::ArrowUp) {
+                        shop_selected_item = (shop_selected_item - 1 + static_cast<int>(shop_items.size())) % static_cast<int>(shop_items.size());
+                        return true;
+                    }
+                    if (event == Event::ArrowDown) {
+                        shop_selected_item = (shop_selected_item + 1) % static_cast<int>(shop_items.size());
+                        return true;
+                    }
+                    if (event == Event::Return) {
+                        switch (shop_selected_item) {
+                            case 0: // Dual Shot
+                                game.BuyWeapon(WeaponType::DUAL, 50);
+                                break;
+                            case 1: // Tri Shot
+                                game.BuyWeapon(WeaponType::TRI, 100);
+                                break;
+                            case 2: // Explosive Orb
+                                game.BuyWeapon(WeaponType::EXPLOSIVE, 150);
+                                break;
+                            case 3: // Shield
+                                game.BuyShield(75);
+                                break;
+                            case 4: // Resume
+                                paused = false;
+                                break;
+                        }
+                        return true;
+                    }
+                    if (event == Event::Escape) {
+                        paused = false;
+                        return true;
+                    }
+                    return true;
+                }
+
                 bool handled = game.HandleEvent(event);
 
                 if (game.IsGameOver()) {
@@ -179,7 +263,7 @@ int main() {
     std::thread ticker([&] {
         while (running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
-            if (current_state == GameState::Playing) {
+            if (current_state == GameState::Playing && !paused) {
                 screen.Post([&] {
                     game.Update();
                     screen.RequestAnimationFrame();

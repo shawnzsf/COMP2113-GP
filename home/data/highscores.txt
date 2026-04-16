@@ -1,2 +1,10 @@
+Player 740 5
 Player 510 4
+Player 460 4
+Player 360 3
 Player 130 2
+Player 100 1
+Player 60 1
+Player 30 1
+Player 0 1
+Player 0 1

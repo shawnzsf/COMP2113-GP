@@ -8,9 +8,20 @@ struct Position {
     int y;
 };
 
+enum class BulletType {
+    NORMAL,
+    EXPLOSIVE,
+    FRAGMENT
+};
+
 struct Bullet {
     Position pos;
     bool active = true;
+    int dx = 0;
+    int dy = -1;
+    int lifetime = 0;
+    int explode_timer = 0;
+    BulletType type = BulletType::NORMAL;
 };
 
 enum class EnemyType {

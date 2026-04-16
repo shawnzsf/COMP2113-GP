@@ -2,8 +2,16 @@
 #include "ftxui/dom/canvas.hpp"
 #include "ftxui/component/event.hpp"
 #include "../entities/enemy.hpp"
+#include "../entities/player.hpp"
 #include <vector>
 #include <string>
+
+enum class WeaponType {
+    BASIC,
+    DUAL,
+    TRI,
+    EXPLOSIVE
+};
 
 class Game {
 public:
@@ -16,13 +24,19 @@ public:
     bool IsGameOver() const;
     int GetScore() const;
     int GetWave() const;
+    bool CanAfford(int amount) const;
+    bool BuyWeapon(WeaponType type, int cost);
+    bool BuyShield(int cost);
+    int GetCash() const;
+    WeaponType GetWeaponType() const;
+    bool HasShield() const;
     
     static constexpr int WIDTH = 170;
     static constexpr int HEIGHT = 125;
 
 private:
     // Game state
-    Position player_pos;
+    Player player;
     std::vector<Bullet> player_bullets;
     std::vector<Enemy> enemies;
     
@@ -57,10 +71,15 @@ private:
     int move_down_timer = 0;
     bool shoot_requested = false;
 
+    // Player upgrades and currency
+    int cash = 0;
+    WeaponType weapon_type = WeaponType::BASIC;
+
     // Private methods
     void MoveEnemies();
     void MoveBullets();
     void CheckCollisions();
     void SpawnEnemies();
     void UpdateWave();
+    void FireWeapon();
 };
