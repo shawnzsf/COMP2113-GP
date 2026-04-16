@@ -192,6 +192,16 @@ int main() {
             }
 
             case GameState::Playing: {
+                if (event == Event::Character('q') || event == Event::Character('Q')) {
+                    // Save progress before returning to the menu
+                    if (highscore.IsHighScore(game.GetScore())) {
+                        highscore.AddScore(player_name, game.GetScore(), game.GetWave());
+                    }
+                    current_state = GameState::MainMenu;
+                    paused = false;
+                    return true;
+                }
+
                 if (event == Event::Character('p') || event == Event::Character('P')) {
                     paused = !paused;
                     return true;
