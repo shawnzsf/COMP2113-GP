@@ -23,11 +23,26 @@ ftxui::Element HUD::Render(const Game& game, int shoot_cooldown, int max_shoot_c
         RenderHealthInfo(game) | flex,
     }) | color(Color::White));
 
-    // Add a fixed-height spacer before the cooldown bar
-    // hud_content.push_back(text(" ") | size(HEIGHT, EQUAL, 1));
 
-    hud_content.push_back(RenderCooldownBar(shoot_cooldown, max_shoot_cooldown, "Weapon Cooldown") 
+    hud_content.push_back(RenderCooldownBar(shoot_cooldown, max_shoot_cooldown, "Weapon Cooldown")
                          | color(Color::Yellow));
+
+    hud_content.push_back(text(""));  // Spacer
+
+    // Add random event display - always show event bar at bottom
+    std::string event_bar = "══════ WAVE " + std::to_string(game.GetWave()) + " EVENT: ";
+    if (game.HasActiveEvent()) {
+        const RandomEvent& evt = game.GetCurrentEvent();
+        if (!evt.name.empty()) {
+            event_bar += evt.name + " - " + evt.description;
+        } else {
+            event_bar += "Clear Skies";
+        }
+    } else {
+        event_bar += "Clear Skies";
+    }
+    event_bar += " ══════";
+    hud_content.push_back(text(event_bar) | color(Color::Magenta) | center);
 
     return vbox(std::move(hud_content)) 
         | border 
@@ -53,14 +68,54 @@ ftxui::Element HUD::RenderWeaponInfo(const Game& game) const {
         default:
             weapon_name = "Unknown";
     }
-    
+
+    // Get bullet type info
+    std::string bullet_name;
+    Color bullet_color;
+    switch (game.GetBulletType()) {
+        case BulletType::NORMAL:
+            bullet_name = "Basic";
+            bullet_color = Color::White;
+            break;
+        case BulletType::EXPLOSIVE:
+            bullet_name = "Explosive";
+            bullet_color = Color::Red;
+            break;
+        case BulletType::PIERCING:
+            bullet_name = "Piercing";
+            bullet_color = Color::Cyan;
+            break;
+        default:
+            bullet_name = "Unknown";
+            bullet_color = Color::GrayDark;
+    }
+
+    // Show unlock status
+    std::string unlock_info = "";
+    if (!game.HasExplosive() && !game.HasPiercing()) {
+        unlock_info = "";
+    }
+
     Elements weapon_info;
     weapon_info.push_back(text("WEAPON") | bold | color(Color::Yellow));
     weapon_info.push_back(text(weapon_name) | color(Color::Green));
+    weapon_info.push_back(text("[" + bullet_name + "]") | color(bullet_color) | bold);
+    if (!game.HasExplosive() || !game.HasPiercing()) {
+        std::string unlocks = "";
+        if (!game.HasExplosive()) unlocks += "E";
+        if (!game.HasPiercing()) unlocks += "P";
+        weapon_info.push_back(text("(!" + unlocks + ")") | color(Color::GrayDark));
+    }
     if (game.HasShield()) {
         weapon_info.push_back(text("Shield Active") | color(Color::Blue));
     }
-    
+    if (game.GetSpeedBoostTimer() > 0) {
+        weapon_info.push_back(text("SPD UP") | color(Color::Green));
+    }
+    if (game.GetDamageBoostTimer() > 0) {
+        weapon_info.push_back(text("DMG UP") | color(Color::Red));
+    }
+
     return vbox(std::move(weapon_info)) | center;
 }
 
@@ -133,6 +188,41 @@ ftxui::Element HUD::RenderHealthInfo(const Game& game) const {
     Elements health_info;
     health_info.push_back(text("HP") | bold | color(Color::Yellow));
     health_info.push_back(text(health_bar) | color(health > 1 ? Color::Green : Color::Red));
-    
+
     return vbox(std::move(health_info)) | center;
+}
+
+ftxui::Element HUD::RenderEventInfo(const Game& game) const {
+    const RandomEvent& event = game.GetCurrentEvent();
+
+    Color event_color;
+    std::string prefix;
+    switch (event.type) {
+        case EventType::PLAYER_BUFF:
+            event_color = Color::Green;
+            prefix = "✨";
+            break;
+        case EventType::ENEMY_DEBUFF:
+            event_color = Color::Cyan;
+            prefix = "💫";
+            break;
+        case EventType::ENEMY_BUFF:
+            event_color = Color::Red;
+            prefix = "⚠";
+            break;
+        case EventType::PLAYER_DEBUFF:
+            event_color = Color::Red;
+            prefix = "💢";
+            break;
+        default:
+            event_color = Color::White;
+            prefix = "";
+    }
+
+    std::string event_text = prefix + " " + event.name + ": " + event.description;
+
+    return hbox({
+        text("[" + event.name + "] ") | bold | color(event_color),
+        text(event.description) | color(event_color)
+    }) | center;
 }

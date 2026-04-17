@@ -4,6 +4,7 @@ game.exe
 *.o
 *.obj
 /home/build/
+/home/data/highscores.txt
 
 # IDE
 .vscode/

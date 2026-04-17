@@ -19,4 +19,5 @@ private:
     ftxui::Element RenderEnemyInfo(const Game& game) const;
     ftxui::Element RenderHealthInfo(const Game& game) const;
     ftxui::Element RenderCooldownBar(int current, int max, const std::string& label) const;
+    ftxui::Element RenderEventInfo(const Game& game) const;
 };

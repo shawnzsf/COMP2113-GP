@@ -6,24 +6,38 @@ Shop::Shop() {
 
 void Shop::InitializeItems() {
     items.clear();
-    
-    // WEAPONS
+
+    // WEAPONS (firing patterns)
     items.push_back({"Dual Shot", "Fire two bullets simultaneously", 50, ItemCategory::WEAPON, false, false});
     items.push_back({"Tri Shot", "Fire three bullets in a spread", 100, ItemCategory::WEAPON, false, false});
-    items.push_back({"Explosive Orb", "Fire explosive projectiles", 150, ItemCategory::WEAPON, false, false});
-    
-    // UPGRADES
-    items.push_back({"Fire Rate +10%", "Increase weapon fire rate", 75, ItemCategory::UPGRADE, false, true});
-    items.push_back({"Damage +25%", "Increase bullet damage", 100, ItemCategory::UPGRADE, false, true});
-    items.push_back({"Movement Speed +20%", "Move faster across the battlefield", 60, ItemCategory::UPGRADE, false, true});
-    items.push_back({"Bullet Speed +15%", "Bullets travel faster", 80, ItemCategory::UPGRADE, false, true});
-    items.push_back({"Clip Size +5", "More bullets before reload", 90, ItemCategory::UPGRADE, false, true});
-    
+
+    // BULLETS (bullet types and upgrades)
+    // Unlockable bullet types
+    items.push_back({"Unlock Explosive", "Unlock explosive bullets", 150, ItemCategory::BULLET, false, false});
+    items.push_back({"Unlock Piercing", "Unlock piercing bullets", 200, ItemCategory::BULLET, false, false});
+
+    // Basic bullet upgrades
+    items.push_back({"Basic Damage +1", "Increase basic bullet damage", 50, ItemCategory::BULLET, false, true});
+
+    // Explosive bullet upgrades (choose one at a time)
+    items.push_back({"Explosive Damage +1", "Increase explosive bullet damage", 60, ItemCategory::BULLET, false, true});
+    items.push_back({"Explosive Radius +1", "Increase blast radius", 60, ItemCategory::BULLET, false, true});
+
+    // Piercing bullet upgrades (choose one at a time)
+    items.push_back({"Piercing Damage +1", "Increase piercing bullet damage", 50, ItemCategory::BULLET, false, true});
+    items.push_back({"Piercing Penetra. +1", "Increase penetration count", 60, ItemCategory::BULLET, false, true});
+
+    // ITEMS (one-time use consumables)
+    items.push_back({"Speed Boost", "+50% speed for 10 seconds", 30, ItemCategory::ITEM, false, false});
+    items.push_back({"Health Pack", "Restore 1 HP instantly", 40, ItemCategory::ITEM, false, false});
+    items.push_back({"Shield Pack", "Shield for 30 seconds", 50, ItemCategory::ITEM, false, false});
+    items.push_back({"Damage Boost", "2x damage for 8 seconds", 45, ItemCategory::ITEM, false, false});
+
     // ABILITIES
     items.push_back({"Shield Barrier", "Create a protective shield", 75, ItemCategory::ABILITY, false, false});
-    items.push_back({"Rapid Fire", "Temporary boost to fire rate", 120, ItemCategory::ABILITY, false, false});
+    items.push_back({"Rapid Fire", "Double your fire rate", 120, ItemCategory::ABILITY, false, false});
     items.push_back({"Time Slow", "Slow down enemies temporarily", 150, ItemCategory::ABILITY, false, false});
-    items.push_back({"Health Recovery", "Restore one unit of health", 110, ItemCategory::ABILITY, false, false});
+    items.push_back({"Freeze", "Freeze all enemies for 5 seconds", 180, ItemCategory::ABILITY, false, false});
 }
 
 const std::vector<ShopItem>& Shop::GetAllItems() const {

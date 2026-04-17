@@ -4,7 +4,8 @@
 
 enum class ItemCategory {
     WEAPON,
-    UPGRADE,
+    BULLET,
+    ITEM,
     ABILITY
 };
 

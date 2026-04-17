@@ -11,7 +11,7 @@ struct Position {
 enum class BulletType {
     NORMAL,
     EXPLOSIVE,
-    FRAGMENT
+    PIERCING
 };
 
 struct Bullet {
@@ -23,6 +23,8 @@ struct Bullet {
     int lifetime = 0;
     int explode_timer = 0;
     BulletType type = BulletType::NORMAL;
+    int damage = 1;
+    int penetration = 0;  // For piercing bullets - remaining enemies to penetrate
 };
 
 enum class EnemyType {
