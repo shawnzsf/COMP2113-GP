@@ -14,8 +14,15 @@ add_executable(Shooter_game
     src/core/main.cpp
     src/core/game.cpp
     src/data/highscore.cpp
+    src/entities/bullet.cpp
     src/entities/enemy.cpp
     src/entities/player.cpp
+    src/ui/hud.cpp
+    src/ui/menu.cpp
+    src/weapons/weapon.cpp
+    src/weapons/normal_weapon.cpp
+    src/weapons/double_weapon.cpp
+    src/weapons/spread_weapon.cpp
 )
 
 target_link_libraries(Shooter_game PRIVATE

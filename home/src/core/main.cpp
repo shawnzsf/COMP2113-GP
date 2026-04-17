@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "../data/highscore.hpp"
+#include "../ui/hud.hpp"
 #include "ftxui/component/screen_interactive.hpp"
 #include "ftxui/component/component.hpp"
 #include "ftxui/dom/elements.hpp"
@@ -9,6 +10,16 @@
 #include <chrono>
 #include <thread>
 #include <string>
+
+// Change the bullet icon to unicode
+// Add an hud that shows the player's current weapon, score, wave, and cash. Also show cooldowns for abilities and weapon upgrades. The hud should be placed at the top of the screen and should be visually distinct from the gameplay area. This allows players to easily keep track of their status and make informed decisions during gameplay. For example, if the player sees that their current weapon is on cooldown, they might choose to use an ability or switch to a different weapon if they have one available. Additionally, showing the player's cash can help them decide when to visit the shop and what items or upgrades they can afford. Overall, a well-designed hud enhances the player's experience by providing important information at a glance without cluttering the screen.
+// The current pasuse menu can also be increased, since a more comprehensive shopping system will be implemented, make the pause menu a full shop menu, where players can buy weapons, upgrades, and abilities. The shop should have a clear layout that categorizes items (e.g., weapons, upgrades, abilities) and displays the player's current cash and the cost of each item. Players should be able to navigate the shop using the arrow keys and select items to purchase with the Enter key. Additionally, there should be an option to exit the shop and resume the game. This allows players to make strategic decisions about their purchases without feeling rushed, as they can take their time to browse through the available options and plan their upgrades based on their current needs in the game.
+// add weapon system, switch between different weapons, weapon can be upgraded, fire rate, etc. some amount of money to unlock weapon then upgrade
+// Create a bullet system. Remove the explosive weapon, it should belong to the bullet system. We will have three types of bullets: basic, explosive (like the current explosive weapon), and piercing (laser-like, fast and can penetrate enemies). Each bullet type has different behavior and can be upgraded separately. For example, basic bullets can be upgraded to increase damage, explosive bullets can be upgraded to increase blast radius, and piercing bullets can be upgraded to penetrate more enemies. This adds more depth and strategy to the gameplay, as players can choose which bullet type to focus on based on their playstyle and the current wave of enemies. Player should be offered the option to upgrade specific property of the bullet, for example, For explosive bullet, you can choose to upgrade blast radius or damage. For piercing bullet, you can choose to upgrade penetration or speed. This allows for more customization and strategic choices in how players want to enhance their weapons.
+// item system, temporarily increase the player's speed, or increase health, etc. One time use, or last for a few seconds. Can also be bought in the shop.
+// ability system, abilities should also be bought and upgraded, including stuff like shield, or freeze the enemies
+// Improve the spawning system; for each wave, you have a fixed level of toughness (e.g. for wave 1 is 5), and each regular (1)/elite (3)/boss (6) contribute differently to that toughness. For example, earlier waves can only have regular/elite enemies that could contribute to the overall toughness. In later waves boss will also be available for filling the toughness. And the toughness will increase over time. This ensures the waves feel more balanced and challenging as you progress.
+// The overall difficulty should increase over time, for every like 5 or 10 waves, increase the enemy strength, so that the same enemies will have more health (boss also having higher damage) and give more points. This ensures the game remains challenging even if you have good weapons and upgrades.
 
 enum class GameState {
     MainMenu,
@@ -22,6 +33,7 @@ int main() {
 
     Game game;
     HighScore highscore;
+    HUD hud;
     GameState current_state = GameState::MainMenu;
     int selected_menu_item = 0;
     std::string player_name = "Player";
@@ -105,6 +117,16 @@ int main() {
 
         Element game_display = canvas(c) | border | color(Color::White);
 
+        // Create the HUD display at the top
+        Element hud_display = hud.Render(game, game.GetShootCooldown(), game.GetMaxShootCooldown());
+
+        // Stack HUD on top of game display
+        Element combined_display = vbox({
+            hud_display | size(HEIGHT, LESS_THAN, 5),
+            separator(),
+            game_display | flex_grow,
+        });
+
         if (paused) {
             Elements shop_lines;
             shop_lines.push_back(text("SHOP MENU") | bold | color(Color::Yellow) | center);
@@ -131,19 +153,19 @@ int main() {
             shop_lines.push_back(text("Use ↑↓ to select, Enter to buy/resume, P to close") | color(Color::GrayLight) | center);
 
             auto shop_box = vbox(std::move(shop_lines)) | border | color(Color::Green);
-            game_display = vbox({
-                game_display,
+            combined_display = vbox({
+                combined_display,
                 separator(),
                 shop_box,
             });
         } else if (game.IsGameOver()) {
-            game_display = dbox({
-                game_display,
+            combined_display = dbox({
+                combined_display,
                 filler() | size(HEIGHT, EQUAL, 1),
             });
         }
 
-        return game_display;
+        return combined_display;
     });
 
     // Main renderer that switches based on state

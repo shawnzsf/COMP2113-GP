@@ -530,3 +530,11 @@ WeaponType Game::GetWeaponType() const {
 bool Game::HasShield() const {
     return player.HasShield();
 }
+
+int Game::GetShootCooldown() const {
+    return shoot_cooldown;
+}
+
+int Game::GetMaxShootCooldown() const {
+    return SHOOT_COOLDOWN;
+}
