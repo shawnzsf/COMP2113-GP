@@ -19,6 +19,7 @@ add_executable(Shooter_game
     src/entities/player.cpp
     src/ui/hud.cpp
     src/ui/menu.cpp
+    src/ui/shop.cpp
     src/weapons/weapon.cpp
     src/weapons/normal_weapon.cpp
     src/weapons/double_weapon.cpp

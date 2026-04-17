@@ -8,7 +8,7 @@ using namespace ftxui;
 ftxui::Element HUD::Render(const Game& game, int shoot_cooldown, int max_shoot_cooldown) {
     Elements hud_content;
 
-    // Create four columns: Weapon | Score | Wave | Cash
+    // Create six columns: Weapon | Score | Wave | Cash | Enemies | Health
     hud_content.push_back(hbox({
         RenderWeaponInfo(game) | flex,
         separator(),
@@ -17,9 +17,15 @@ ftxui::Element HUD::Render(const Game& game, int shoot_cooldown, int max_shoot_c
         RenderWaveInfo(game) | flex,
         separator(),
         RenderCashInfo(game) | flex,
+        separator(),
+        RenderEnemyInfo(game) | flex,
+        separator(),
+        RenderHealthInfo(game) | flex,
     }) | color(Color::White));
 
-    // Add weapon cooldown bar
+    // Add a fixed-height spacer before the cooldown bar
+    // hud_content.push_back(text(" ") | size(HEIGHT, EQUAL, 1));
+
     hud_content.push_back(RenderCooldownBar(shoot_cooldown, max_shoot_cooldown, "Weapon Cooldown") 
                          | color(Color::Yellow));
 
@@ -104,4 +110,29 @@ ftxui::Element HUD::RenderCooldownBar(int current, int max, const std::string& l
     cooldown_display.push_back(text(oss.str()) | color(Color::White));
     
     return hbox(std::move(cooldown_display)) | center;
+}
+
+ftxui::Element HUD::RenderEnemyInfo(const Game& game) const {
+    Elements enemy_info;
+    enemy_info.push_back(text("👾 ENEMIES") | bold | color(Color::Yellow));
+    enemy_info.push_back(text(std::to_string(game.GetEnemyCount())) | color(Color::Red) | bold);
+    
+    return vbox(std::move(enemy_info)) | center;
+}
+
+ftxui::Element HUD::RenderHealthInfo(const Game& game) const {
+    int health = game.GetPlayerHealth();
+    int max_health = game.GetPlayerMaxHealth();
+    
+    // Create a simple health bar
+    std::string health_bar;
+    for (int i = 0; i < max_health; ++i) {
+        health_bar += (i < health) ? "❤" : "🖤";
+    }
+    
+    Elements health_info;
+    health_info.push_back(text("HP") | bold | color(Color::Yellow));
+    health_info.push_back(text(health_bar) | color(health > 1 ? Color::Green : Color::Red));
+    
+    return vbox(std::move(health_info)) | center;
 }

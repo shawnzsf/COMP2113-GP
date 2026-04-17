@@ -16,5 +16,7 @@ private:
     ftxui::Element RenderScoreInfo(const Game& game) const;
     ftxui::Element RenderWaveInfo(const Game& game) const;
     ftxui::Element RenderCashInfo(const Game& game) const;
+    ftxui::Element RenderEnemyInfo(const Game& game) const;
+    ftxui::Element RenderHealthInfo(const Game& game) const;
     ftxui::Element RenderCooldownBar(int current, int max, const std::string& label) const;
 };

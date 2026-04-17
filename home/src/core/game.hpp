@@ -32,6 +32,18 @@ public:
     bool HasShield() const;
     int GetShootCooldown() const;
     int GetMaxShootCooldown() const;
+    int GetEnemyCount() const;
+    int GetPlayerHealth() const;
+    int GetPlayerMaxHealth() const;
+    
+    // Upgrade accessors
+    bool HasRapidFire() const;
+    bool HasTimeSlow() const;
+    int GetFireRateUpgrades() const;
+    int GetDamageUpgrades() const;
+    int GetSpeedUpgrades() const;
+    int GetBulletSpeedUpgrades() const;
+    int GetClipSizeUpgrades() const;
     
     static constexpr int WIDTH = 170;
     static constexpr int HEIGHT = 125;
@@ -78,6 +90,15 @@ private:
     // Player upgrades and currency
     int cash = 0;
     WeaponType weapon_type = WeaponType::BASIC;
+    
+    // Upgrade tracking
+    bool has_rapid_fire = false;
+    bool has_time_slow = false;
+    int fire_rate_upgrades = 0;
+    int damage_upgrades = 0;
+    int speed_upgrades = 0;
+    int bullet_speed_upgrades = 0;
+    int clip_size_upgrades = 0;
 
     // Private methods
     void MoveEnemies();

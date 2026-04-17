@@ -461,21 +461,21 @@ void Game::Draw(ftxui::Canvas& canvas) {
         }
     }
 
-    // Draw HUD (Score, Cash, and Wave)
-    std::string score_text = "Score: " + std::to_string(score);
-    std::string cash_text = "Cash: $" + std::to_string(cash);
-    std::string wave_text = "Wave: " + std::to_string(wave);
-    std::string enemies_text = "Enemies: " + std::to_string(
-        std::count_if(enemies.begin(), enemies.end(), 
-            [](const Enemy& e) { return e.IsAlive(); })
-    );
-    std::string hp_text = "HP: " + std::to_string(player.GetHealth());
+    // // Draw HUD (Score, Cash, and Wave)
+    // std::string score_text = "Score: " + std::to_string(score);
+    // std::string cash_text = "Cash: $" + std::to_string(cash);
+    // std::string wave_text = "Wave: " + std::to_string(wave);
+    // std::string enemies_text = "Enemies: " + std::to_string(
+    //     std::count_if(enemies.begin(), enemies.end(), 
+    //         [](const Enemy& e) { return e.IsAlive(); })
+    // );
+    // std::string hp_text = "HP: " + std::to_string(player.GetHealth());
     
-    canvas.DrawText(2, 1, score_text, ftxui::Color::Yellow);
-    canvas.DrawText(2, 5, cash_text, ftxui::Color::Green);
-    canvas.DrawText(WIDTH / 2 - 8, 1, wave_text, ftxui::Color::Cyan);
-    canvas.DrawText(WIDTH - 35, 1, enemies_text, ftxui::Color::Magenta);
-    canvas.DrawText(WIDTH - 12, 1, hp_text, ftxui::Color::Red);
+    // canvas.DrawText(2, 1, score_text, ftxui::Color::Yellow);
+    // canvas.DrawText(2, 5, cash_text, ftxui::Color::Green);
+    // canvas.DrawText(WIDTH / 2 - 8, 1, wave_text, ftxui::Color::Cyan);
+    // canvas.DrawText(WIDTH - 35, 1, enemies_text, ftxui::Color::Magenta);
+    // canvas.DrawText(WIDTH - 12, 1, hp_text, ftxui::Color::Red);
 
     // Draw game over message
     if (game_over) {
@@ -537,4 +537,44 @@ int Game::GetShootCooldown() const {
 
 int Game::GetMaxShootCooldown() const {
     return SHOOT_COOLDOWN;
+}
+
+bool Game::HasRapidFire() const {
+    return has_rapid_fire;
+}
+
+bool Game::HasTimeSlow() const {
+    return has_time_slow;
+}
+
+int Game::GetFireRateUpgrades() const {
+    return fire_rate_upgrades;
+}
+
+int Game::GetDamageUpgrades() const {
+    return damage_upgrades;
+}
+
+int Game::GetSpeedUpgrades() const {
+    return speed_upgrades;
+}
+
+int Game::GetBulletSpeedUpgrades() const {
+    return bullet_speed_upgrades;
+}
+
+int Game::GetClipSizeUpgrades() const {
+    return clip_size_upgrades;
+}
+
+int Game::GetEnemyCount() const {
+    return enemies.size();
+}
+
+int Game::GetPlayerHealth() const {
+    return player.GetHealth();
+}
+
+int Game::GetPlayerMaxHealth() const {
+    return player.GetMaxHealth();
 }

@@ -1,6 +1,7 @@
 #include "game.hpp"
 #include "../data/highscore.hpp"
 #include "../ui/hud.hpp"
+#include "../ui/shop.hpp"
 #include "ftxui/component/screen_interactive.hpp"
 #include "ftxui/component/component.hpp"
 #include "ftxui/dom/elements.hpp"
@@ -34,18 +35,16 @@ int main() {
     Game game;
     HighScore highscore;
     HUD hud;
+    Shop shop;
     GameState current_state = GameState::MainMenu;
     int selected_menu_item = 0;
     std::string player_name = "Player";
     bool paused = false;
+    
+    // Shop state tracking
+    ItemCategory current_shop_category = ItemCategory::WEAPON;
     int shop_selected_item = 0;
-    const std::vector<std::string> shop_items = {
-        "Dual Shot - $50",
-        "Tri Shot - $100",
-        "Explosive Orb - $150",
-        "Shield - $75",
-        "Resume"
-    };
+    std::vector<ShopItem> current_shop_items = shop.GetItemsByCategory(current_shop_category);
 
     auto screen = ScreenInteractive::Fullscreen();
 
@@ -112,6 +111,90 @@ int main() {
 
     // Game renderer
     auto game_renderer = Renderer([&] {
+        // If paused, show full-screen shop
+        if (paused) {
+            Elements shop_lines;
+            shop_lines.push_back(text(""));
+            shop_lines.push_back(text("╔════════════════════════════ SHOP MENU ════════════════════════════╗") | bold | color(Color::Yellow) | center);
+            shop_lines.push_back(text(""));
+            
+            // Display cash and current status
+            Elements status_line;
+            status_line.push_back(text("💰 Cash: $" + std::to_string(game.GetCash())) | color(Color::Green) | bold);
+            status_line.push_back(text(" | "));
+            status_line.push_back(text("Weapon: " + std::string(
+                game.GetWeaponType() == WeaponType::BASIC ? "Basic" :
+                game.GetWeaponType() == WeaponType::DUAL ? "Dual" :
+                game.GetWeaponType() == WeaponType::TRI ? "Tri" : "Explosive"
+            )) | color(Color::Cyan));
+            if (game.HasShield()) {
+                status_line.push_back(text(" | 🛡 Shield"));
+            }
+            shop_lines.push_back(hbox(std::move(status_line)) | center);
+            shop_lines.push_back(text(""));
+            shop_lines.push_back(separator());
+            
+            // Display categories
+            Elements category_line;
+            const char* categories[] = {"⚔ WEAPONS", "🔧 UPGRADES", "✨ ABILITIES"};
+            ItemCategory category_values[] = {ItemCategory::WEAPON, ItemCategory::UPGRADE, ItemCategory::ABILITY};
+            
+            for (int i = 0; i < 3; ++i) {
+                std::string cat_text = categories[i];
+                if (category_values[i] == current_shop_category) {
+                    category_line.push_back(text(" [" + cat_text + "] ") | bgcolor(Color::Blue) | color(Color::White) | bold);
+                } else {
+                    category_line.push_back(text(" " + cat_text + " ") | color(Color::GrayDark));
+                }
+                if (i < 2) category_line.push_back(text(" | "));
+            }
+            shop_lines.push_back(hbox(std::move(category_line)) | center);
+            shop_lines.push_back(text(""));
+            shop_lines.push_back(separator());
+            
+            // Display items in current category
+            if (!current_shop_items.empty()) {
+                for (size_t i = 0; i < current_shop_items.size(); ++i) {
+                    const auto& item = current_shop_items[i];
+                    std::string prefix = (static_cast<int>(i) == shop_selected_item) ? "→ " : "  ";
+                    
+                    // Determine item status
+                    std::string status_text;
+                    Color item_color = Color::White;
+                    bool is_selectable = !item.owned;
+                    
+                    if (item.owned && !item.can_stack) {
+                        status_text = " [OWNED]";
+                        item_color = Color::Green;
+                        is_selectable = false;
+                    } else if (shop.CanAfford(item, game.GetCash())) {
+                        status_text = " [$" + std::to_string(item.cost) + "]";
+                        item_color = Color::Yellow;
+                    } else {
+                        status_text = " [$" + std::to_string(item.cost) + " - UNAVAILABLE]";
+                        item_color = Color::Red;
+                        is_selectable = false;
+                    }
+                    
+                    auto item_element = text(prefix + item.name) | color(item_color);
+                    if (static_cast<int>(i) == shop_selected_item && is_selectable) {
+                        item_element = item_element | bold | bgcolor(Color::DarkBlue);
+                    }
+                    shop_lines.push_back(item_element);
+                    shop_lines.push_back(text("     " + item.description + status_text) | color(Color::GrayLight));
+                }
+            }
+            
+            shop_lines.push_back(text(""));
+            shop_lines.push_back(text(""));
+            shop_lines.push_back(separator());
+            shop_lines.push_back(text("←→ Switch category | ↑↓ Select item | Enter to buy | P to Resume Game") | color(Color::GrayLight) | center);
+            shop_lines.push_back(text(""));
+
+            return vbox(std::move(shop_lines)) | border | color(Color::Green) | bgcolor(Color::RGB(16, 16, 16)) | flex;
+        }
+        
+        // Normal gameplay display (when not paused)
         Canvas c(Game::WIDTH, Game::HEIGHT);
         game.Draw(c);
 
@@ -127,38 +210,7 @@ int main() {
             game_display | flex_grow,
         });
 
-        if (paused) {
-            Elements shop_lines;
-            shop_lines.push_back(text("SHOP MENU") | bold | color(Color::Yellow) | center);
-            shop_lines.push_back(text("Cash: $" + std::to_string(game.GetCash())) | color(Color::Green) | center);
-            shop_lines.push_back(text("Current Weapon: " + std::string(
-                game.GetWeaponType() == WeaponType::BASIC ? "Basic" :
-                game.GetWeaponType() == WeaponType::DUAL ? "Dual" :
-                game.GetWeaponType() == WeaponType::TRI ? "Tri" : "Explosive"
-            )) | color(Color::White) | center);
-            shop_lines.push_back(text("Shield: " + std::string(game.HasShield() ? "Owned" : "Available")) | color(Color::White) | center);
-            shop_lines.push_back(separator());
-
-            for (size_t i = 0; i < shop_items.size(); ++i) {
-                auto item_text = text((static_cast<int>(i) == shop_selected_item ? "> " : "  ") + shop_items[i]);
-                if (static_cast<int>(i) == shop_selected_item) {
-                    item_text = item_text | color(Color::Yellow) | bold;
-                } else {
-                    item_text = item_text | color(Color::White);
-                }
-                shop_lines.push_back(item_text);
-            }
-
-            shop_lines.push_back(text("") );
-            shop_lines.push_back(text("Use ↑↓ to select, Enter to buy/resume, P to close") | color(Color::GrayLight) | center);
-
-            auto shop_box = vbox(std::move(shop_lines)) | border | color(Color::Green);
-            combined_display = vbox({
-                combined_display,
-                separator(),
-                shop_box,
-            });
-        } else if (game.IsGameOver()) {
+        if (game.IsGameOver()) {
             combined_display = dbox({
                 combined_display,
                 filler() | size(HEIGHT, EQUAL, 1),
@@ -235,39 +287,95 @@ int main() {
 
                 if (event == Event::Character('p') || event == Event::Character('P')) {
                     paused = !paused;
+                    if (paused) {
+                        // Reset shop to Weapons category when pausing
+                        current_shop_category = ItemCategory::WEAPON;
+                        current_shop_items = shop.GetItemsByCategory(current_shop_category);
+                        shop_selected_item = 0;
+                    }
                     return true;
                 }
 
                 if (paused) {
+                    // Handle category switching with Left/Right arrows
+                    if (event == Event::ArrowLeft) {
+                        if (current_shop_category == ItemCategory::WEAPON) {
+                            current_shop_category = ItemCategory::ABILITY;
+                        } else if (current_shop_category == ItemCategory::UPGRADE) {
+                            current_shop_category = ItemCategory::WEAPON;
+                        } else {
+                            current_shop_category = ItemCategory::UPGRADE;
+                        }
+                        current_shop_items = shop.GetItemsByCategory(current_shop_category);
+                        shop_selected_item = 0;
+                        return true;
+                    }
+                    if (event == Event::ArrowRight) {
+                        if (current_shop_category == ItemCategory::WEAPON) {
+                            current_shop_category = ItemCategory::UPGRADE;
+                        } else if (current_shop_category == ItemCategory::UPGRADE) {
+                            current_shop_category = ItemCategory::ABILITY;
+                        } else {
+                            current_shop_category = ItemCategory::WEAPON;
+                        }
+                        current_shop_items = shop.GetItemsByCategory(current_shop_category);
+                        shop_selected_item = 0;
+                        return true;
+                    }
+                    
+                    // Handle item selection with Up/Down arrows
                     if (event == Event::ArrowUp) {
-                        shop_selected_item = (shop_selected_item - 1 + static_cast<int>(shop_items.size())) % static_cast<int>(shop_items.size());
+                        shop_selected_item = (shop_selected_item - 1 + static_cast<int>(current_shop_items.size())) % static_cast<int>(current_shop_items.size());
                         return true;
                     }
                     if (event == Event::ArrowDown) {
-                        shop_selected_item = (shop_selected_item + 1) % static_cast<int>(shop_items.size());
+                        shop_selected_item = (shop_selected_item + 1) % static_cast<int>(current_shop_items.size());
                         return true;
                     }
+                    
+                    // Handle purchase with Enter
                     if (event == Event::Return) {
-                        switch (shop_selected_item) {
-                            case 0: // Dual Shot
-                                game.BuyWeapon(WeaponType::DUAL, 50);
-                                break;
-                            case 1: // Tri Shot
-                                game.BuyWeapon(WeaponType::TRI, 100);
-                                break;
-                            case 2: // Explosive Orb
-                                game.BuyWeapon(WeaponType::EXPLOSIVE, 150);
-                                break;
-                            case 3: // Shield
-                                game.BuyShield(75);
-                                break;
-                            case 4: // Resume
-                                paused = false;
-                                break;
+                        if (!current_shop_items.empty() && shop_selected_item < static_cast<int>(current_shop_items.size())) {
+                            auto& item = current_shop_items[shop_selected_item];
+                            int cash = game.GetCash();
+                            
+                            if (shop.CanAfford(item, cash)) {
+                                // Handle different types of items
+                                if (item.category == ItemCategory::WEAPON) {
+                                    if (item.name == "Dual Shot" && !item.owned) {
+                                        game.BuyWeapon(WeaponType::DUAL, item.cost);
+                                        item.owned = true;
+                                    } else if (item.name == "Tri Shot" && !item.owned) {
+                                        game.BuyWeapon(WeaponType::TRI, item.cost);
+                                        item.owned = true;
+                                    } else if (item.name == "Explosive Orb" && !item.owned) {
+                                        game.BuyWeapon(WeaponType::EXPLOSIVE, item.cost);
+                                        item.owned = true;
+                                    }
+                                } else if (item.category == ItemCategory::ABILITY) {
+                                    if (item.name == "Shield Barrier" && !item.owned) {
+                                        game.BuyShield(item.cost);
+                                        item.owned = true;
+                                    }
+                                    // Other abilities can be added here
+                                } else if (item.category == ItemCategory::UPGRADE) {
+                                    // All upgrades are stackable
+                                    int temp_cash = game.GetCash();
+                                    if (temp_cash >= item.cost) {
+                                        item.can_stack = true;  // Mark as purchased (stackable)
+                                        // Purchase logic for upgrades
+                                    }
+                                }
+                            }
                         }
                         return true;
                     }
+                    
                     if (event == Event::Escape) {
+                        paused = false;
+                        return true;
+                    }
+                    if (event == Event::Character('p') || event == Event::Character('P')) {
                         paused = false;
                         return true;
                     }
