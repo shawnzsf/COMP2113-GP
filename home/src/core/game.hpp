@@ -30,8 +30,7 @@ public:
     int GetCash() const;
     WeaponType GetWeaponType() const;
     bool HasShield() const;
-    int GetHealth() const;
-    int GetMaxHealth() const;
+    
     static constexpr int WIDTH = 170;
     static constexpr int HEIGHT = 125;
 
@@ -58,8 +57,8 @@ private:
     static constexpr int POINTS_ELITE_ENEMY = 30;
     static constexpr int POINTS_BOSS_ENEMY = 100;
     static constexpr int SHOOT_COOLDOWN = 6;  // Frames between shots
-    static constexpr int SHOOT_HOLD_FRAMES = 15; // Keep shooting active briefly after the last event
-    static constexpr int INPUT_HOLD_FRAMES = 25;  // Keep a direction active briefly after the last event
+    static constexpr int SHOOT_HOLD_FRAMES = 10; // Keep shooting active briefly after the last event
+    static constexpr int INPUT_HOLD_FRAMES = 15;  // Keep a direction active briefly after the last event
     int shoot_cooldown = 0;
     int shoot_hold_timer = 0;
 

@@ -20,9 +20,10 @@ void Game::SpawnEnemies() {
     int start_x = (WIDTH - (enemy_count * 6)) / 2;  // Center the formation
 
     // Enemy type probabilities (higher wave = more elite/boss enemies)
-    int boss_chance = std::min(5 + wave, 15);     // 5% base, up to 15%
-    int elite_chance = std::min(10 + wave * 2, 30); // 10% base, up to 30%
-    int circle_shooter_chance = std::min(5 + wave, 10); // 5% base, up to 10%
+    int megaboss_chance = std::min(2 + wave / 5, 5);     // 2% base, up to 5% (very rare)
+    int boss_chance = std::min(5 + wave, 15);            // 5% base, up to 15%
+    int circle_shooter_chance = std::min(8 + wave, 20);  // 8% base, up to 20%
+    int elite_chance = std::min(10 + wave * 2, 30);      // 10% base, up to 30%
     // Regular enemies get the remainder
 
     for (int i = 0; i < enemy_count && i < 20; ++i) {  // Cap at 20 enemies
@@ -32,15 +33,18 @@ void Game::SpawnEnemies() {
         int rand_val = rand() % 100;
 
         Enemy enemy;
-        if (rand_val < boss_chance) {
+        if (rand_val < megaboss_chance) {
+            // Megaboss enemy (rarest)
+            enemy = CreateMegabossEnemy(pos);
+        } else if (rand_val < megaboss_chance + boss_chance) {
             // Boss enemy (least frequent)
             enemy = CreateBossEnemy(pos);
-        } else if (rand_val < boss_chance + elite_chance) {
+        } else if (rand_val < megaboss_chance + boss_chance + circle_shooter_chance) {
+            // Circle shooter enemy (moderate frequency)
+            enemy = CreateCircleShooterEnemy(pos);
+        } else if (rand_val < megaboss_chance + boss_chance + circle_shooter_chance + elite_chance) {
             // Elite enemy (medium frequency)
             enemy = CreateEliteEnemy(pos);
-        } else if (rand_val < boss_chance + elite_chance + circle_shooter_chance) {
-            // Circle shooter
-            enemy = CreateCircleShooterEnemy(pos);
         } else {
             // Regular enemy (most frequent)
             enemy = CreateRegularEnemy(pos);
@@ -275,9 +279,9 @@ void Game::MoveEnemies() {
     if (frame_count % ENEMY_MOVE_INTERVAL == 0) {
         bool edge_reached = false;
 
-        // Check if any alive regular enemy reached the edge
+        // Check if any alive formation enemy reached the edge
         for (const auto& e : enemies) {
-            if (e.IsAlive() && e.type == EnemyType::REGULAR) {
+            if (e.IsAlive() && (e.type == EnemyType::REGULAR || e.type == EnemyType::CIRCLE_SHOOTER)) {
                 if ((direction > 0 && e.pos.x >= WIDTH - 6) ||
                     (direction < 0 && e.pos.x <= 4)) {
                     edge_reached = true;
@@ -287,17 +291,17 @@ void Game::MoveEnemies() {
         }
 
         if (edge_reached) {
-            // Reverse direction and descend slightly for regular enemies
+            // Reverse direction and descend slightly for regular formation enemies
             direction = -direction;
             for (auto& e : enemies) {
-                if (e.IsAlive() && e.type == EnemyType::REGULAR) {
+                if (e.IsAlive() && (e.type == EnemyType::REGULAR || e.type == EnemyType::CIRCLE_SHOOTER)) {
                     e.pos.y += 2;  // Descend when hitting edge
                 }
             }
         } else {
-            // Move regular enemies in current direction
+            // Move formation enemies in current direction
             for (auto& e : enemies) {
-                if (e.IsAlive() && e.type == EnemyType::REGULAR) {
+                if (e.IsAlive() && (e.type == EnemyType::REGULAR || e.type == EnemyType::CIRCLE_SHOOTER)) {
                     e.pos.x += direction * ENEMY_MOVE_SPEED;
                 }
             }
@@ -305,8 +309,9 @@ void Game::MoveEnemies() {
     }
 
     // Update all enemies (this handles individual movement for elite/boss, and any other updates)
+    Position player_pos = player.GetPosition();
     for (auto& e : enemies) {
-        e.Update();
+        e.Update(player_pos);
     }
 }
 
@@ -315,9 +320,16 @@ void Game::CheckCollisions() {
         if (!b.active) continue;
 
         for (auto& e : enemies) {
+            float collision_radius = 1.0f;
+            if (e.type == EnemyType::BOSS) collision_radius = 2.0f;
+            else if (e.type == EnemyType::MEGABOSS) collision_radius = 3.0f;
+            
+            if (b.type == BulletType::EXPLOSIVE) collision_radius *= 2.0f;
+            else if (b.type == BulletType::NORMAL) collision_radius *= 1.5f;
+            
             if (e.IsAlive() &&
-                std::abs(b.pos.x - e.pos.x) <= COLLISION_RADIUS &&
-                std::abs(b.pos.y - e.pos.y) <= COLLISION_RADIUS) {
+                std::abs(static_cast<float>(b.pos.x - e.pos.x)) <= collision_radius &&
+                std::abs(static_cast<float>(b.pos.y - e.pos.y)) <= collision_radius) {
 
                 // Deal damage to enemy
                 e.TakeDamage(1);
@@ -361,8 +373,12 @@ void Game::CheckCollisions() {
                             cash += 50;
                             break;
                         case EnemyType::CIRCLE_SHOOTER:
-                            score += 25;  // Points for circle shooter
-                            cash += 20;
+                            score += 60;
+                            cash += 15;
+                            break;
+                        case EnemyType::MEGABOSS:
+                            score += 200;
+                            cash += 100;
                             break;
                     }
                 }
@@ -372,46 +388,22 @@ void Game::CheckCollisions() {
         }
     }
 
-    // Check collisions between boss bullets and player
+    // Check collisions between enemy bullets and player
     for (auto& e : enemies) {
-        if (e.type == EnemyType::BOSS) {
-            for (const auto& boss_bullet : e.bullets) {
-                if (boss_bullet.active) {
-                    Position player_pos = player.GetPosition();
-                    if (std::abs(boss_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
-                        std::abs(boss_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
+        if (e.type == EnemyType::BOSS || e.type == EnemyType::CIRCLE_SHOOTER || e.type == EnemyType::MEGABOSS) {
+            for (const auto& enemy_bullet : e.bullets) {
+                if (!enemy_bullet.active) continue;
 
-                        // Player takes damage (shield will absorb if active)
-                        player.TakeDamage(1);
+                Position player_pos = player.GetPosition();
+                float bullet_radius = (enemy_bullet.type == BulletType::NORMAL) ? 1.5f : 1.0f;
+                if (std::abs(static_cast<float>(enemy_bullet.pos.x - player_pos.x)) <= bullet_radius &&
+                    std::abs(static_cast<float>(enemy_bullet.pos.y - player_pos.y)) <= bullet_radius) {
 
-                        // Check if player is still alive
-                        if (!player.IsAlive()) {
-                            game_over = true;
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-    }
+                    player.TakeDamage(1);
 
-    // Check collisions between circle shooter bullets and player
-    for (auto& e : enemies) {
-        if (e.type == EnemyType::CIRCLE_SHOOTER) {
-            for (const auto& cs_bullet : e.bullets) {
-                if (cs_bullet.active) {
-                    Position player_pos = player.GetPosition();
-                    if (std::abs(cs_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
-                        std::abs(cs_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
-
-                        // Player takes damage (shield will absorb if active)
-                        player.TakeDamage(1);
-
-                        // Check if player is still alive
-                        if (!player.IsAlive()) {
-                            game_over = true;
-                            return;
-                        }
+                    if (!player.IsAlive()) {
+                        game_over = true;
+                        return;
                     }
                 }
             }
@@ -477,14 +469,13 @@ void Game::Draw(ftxui::Canvas& canvas) {
         std::count_if(enemies.begin(), enemies.end(), 
             [](const Enemy& e) { return e.IsAlive(); })
     );
+    std::string hp_text = "HP: " + std::to_string(player.GetHealth());
     
     canvas.DrawText(2, 1, score_text, ftxui::Color::Yellow);
     canvas.DrawText(2, 5, cash_text, ftxui::Color::Green);
     canvas.DrawText(WIDTH / 2 - 8, 1, wave_text, ftxui::Color::Cyan);
-    canvas.DrawText(WIDTH - 40, 1, enemies_text, ftxui::Color::Magenta);
-
-    std::string hp_text = "HP: " + std::to_string(player.GetHealth()) + "/" + std::to_string(player.GetMaxHealth());
-    canvas.DrawText(WIDTH - static_cast<int>(hp_text.size()) - 2, 1, hp_text, ftxui::Color::Red);
+    canvas.DrawText(WIDTH - 35, 1, enemies_text, ftxui::Color::Magenta);
+    canvas.DrawText(WIDTH - 12, 1, hp_text, ftxui::Color::Red);
 
     // Draw game over message
     if (game_over) {
@@ -538,12 +529,4 @@ WeaponType Game::GetWeaponType() const {
 
 bool Game::HasShield() const {
     return player.HasShield();
-}
-
-int Game::GetHealth() const {
-    return player.GetHealth();
-}
-
-int Game::GetMaxHealth() const {
-    return player.GetMaxHealth();
 }

@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <array>
+#include <cmath>
 
 Enemy::Enemy(EnemyType t, Position p) : pos(p), type(t) {
     random_seed = rand() % 1000;  // Initialize with random seed
@@ -21,14 +23,19 @@ Enemy::Enemy(EnemyType t, Position p) : pos(p), type(t) {
             shoot_cooldown = 0;
             break;
         case EnemyType::CIRCLE_SHOOTER:
-            max_health = 2;
-            health = 2;
+            max_health = 5;
+            health = 5;
+            shoot_cooldown = 0;
+            break;
+        case EnemyType::MEGABOSS:
+            max_health = 30;
+            health = 30;
             shoot_cooldown = 0;
             break;
     }
 }
 
-void Enemy::Update() {
+void Enemy::Update(Position player_pos) {
     if (!IsAlive()) return;
 
     switch (type) {
@@ -44,40 +51,22 @@ void Enemy::Update() {
         case EnemyType::CIRCLE_SHOOTER:
             UpdateCircleShooter();
             break;
+        case EnemyType::MEGABOSS:
+            UpdateMegaboss(player_pos);
+            break;
     }
 
-    // Update bullets for boss
-    if (type == EnemyType::BOSS) {
+    if (type == EnemyType::BOSS || type == EnemyType::CIRCLE_SHOOTER || type == EnemyType::MEGABOSS) {
         for (auto& bullet : bullets) {
-            if (bullet.active) {
-                bullet.pos.y += 1;  // Boss bullets move down
-                if (bullet.pos.y > 125) {  // Off screen
-                    bullet.active = false;
-                }
+            if (!bullet.active) continue;
+            bullet.pos.x += bullet.dx;
+            bullet.pos.y += bullet.dy;
+
+            if (bullet.pos.y < 0 || bullet.pos.y > 125 || bullet.pos.x < 0 || bullet.pos.x > 170) {
+                bullet.active = false;
             }
         }
 
-        // Remove inactive bullets
-        bullets.erase(
-            std::remove_if(bullets.begin(), bullets.end(),
-                [](const Bullet& b) { return !b.active; }),
-            bullets.end()
-        );
-    }
-
-    // Update bullets for circle shooter
-    if (type == EnemyType::CIRCLE_SHOOTER) {
-        for (auto& bullet : bullets) {
-            if (bullet.active) {
-                bullet.pos.x += bullet.dx;
-                bullet.pos.y += bullet.dy;
-                if (bullet.pos.y > 125 || bullet.pos.x < 0 || bullet.pos.x > 170) {
-                    bullet.active = false;
-                }
-            }
-        }
-
-        // Remove inactive bullets
         bullets.erase(
             std::remove_if(bullets.begin(), bullets.end(),
                 [](const Bullet& b) { return !b.active; }),
@@ -181,40 +170,121 @@ void Enemy::UpdateBoss() {
 void Enemy::UpdateCircleShooter() {
     move_timer++;
 
-    // Circle shooter moves like regular enemy (formation movement)
-    // But shoots in a circle every 120 frames
-
     if (shoot_cooldown > 0) {
         shoot_cooldown--;
     } else {
-        // Shoot every 120 frames
         if (move_timer % 120 == 0) {
             ShootCircle();
-            shoot_cooldown = 120;  // Cooldown
+            shoot_cooldown = 120;
         }
+    }
+}
+
+void Enemy::UpdateMegaboss(Position player_pos) {
+    (void)player_pos;
+    move_timer++;
+
+    // Megaboss moves slowly and erratically
+    if (move_timer % 16 == 0) {  // Change direction less frequently than regular boss
+        int rand_val = (random_seed + move_timer) % 100;
+
+        // Megaboss can move in 8 directions but more slowly
+        if (rand_val < 12) {
+            move_direction_x = -1; move_direction_y = -1;  // Up-left
+        } else if (rand_val < 25) {
+            move_direction_x = 0; move_direction_y = -1;   // Up
+        } else if (rand_val < 37) {
+            move_direction_x = 1; move_direction_y = -1;   // Up-right
+        } else if (rand_val < 50) {
+            move_direction_x = -1; move_direction_y = 0;   // Left
+        } else if (rand_val < 62) {
+            move_direction_x = 1; move_direction_y = 0;    // Right
+        } else if (rand_val < 75) {
+            move_direction_x = -1; move_direction_y = 1;   // Down-left
+        } else if (rand_val < 87) {
+            move_direction_x = 0; move_direction_y = 1;    // Down
+        } else {
+            move_direction_x = 1; move_direction_y = 1;    // Down-right
+        }
+
+        // Megaboss moves slower than before
+        int speed = 1;  // Slower movement
+        pos.x += move_direction_x * speed;
+        pos.y += move_direction_y * speed;
+
+        // Keep within bounds (megaboss can go closer to edges)
+        pos.x = std::max(10, std::min(160, pos.x));
+        pos.y = std::max(10, std::min(80, pos.y));  // Megaboss stays in upper area
+    }
+
+    // Megaboss shooting logic - shoots every ~1.5 seconds
+    if (shoot_cooldown > 0) {
+        shoot_cooldown--;
+    } else {
+        ShootMegabossSpread();
+        shoot_cooldown = 45;  // About 1.5 seconds at ~30 FPS
     }
 }
 
 void Enemy::ShootBullet() {
     Bullet bullet;
     bullet.pos = {pos.x, pos.y + 2};  // Shoot from below the boss
+    bullet.dx = 0;
+    bullet.dy = 1;  // Move downwards
     bullet.active = true;
     bullets.push_back(bullet);
 }
 
 void Enemy::ShootCircle() {
-    // Shoot bullets in 8 directions (circle)
-    const std::vector<std::pair<int, int>> directions = {
-        {-1, -1}, {0, -1}, {1, -1},
-        {-1, 0},           {1, 0},
-        {-1, 1},  {0, 1},  {1, 1}
-    };
+    const int bullet_count = 32;
+    for (int i = 0; i < bullet_count; ++i) {
+        double angle = 2.0 * 3.14159265358979323846 * i / bullet_count;
+        int dx = static_cast<int>(std::round(std::cos(angle)));
+        int dy = static_cast<int>(std::round(std::sin(angle)));
+        if (dx == 0 && dy == 0) {
+            dx = 0; dy = 1;
+        }
 
+        Bullet bullet;
+        bullet.pos = {pos.x, pos.y};
+        bullet.dx = dx;
+        bullet.dy = dy;
+        bullet.active = true;
+        bullets.push_back(bullet);
+    }
+}
+
+void Enemy::ShootAtPlayer(Position player_pos) {
+    // Calculate direction to player
+    int dx = player_pos.x - pos.x;
+    int dy = player_pos.y - pos.y;
+    
+    // Normalize the direction (simplified)
+    if (dx != 0) dx = dx > 0 ? 1 : -1;
+    if (dy != 0) dy = dy > 0 ? 1 : -1;
+    
+    // If both are 0, shoot down
+    if (dx == 0 && dy == 0) {
+        dy = 1;
+    }
+
+    Bullet bullet;
+    bullet.pos = {pos.x, pos.y};
+    bullet.dx = dx;
+    bullet.dy = dy;
+    bullet.length = 2;  // Twice as long as normal bullets
+    bullet.active = true;
+    bullets.push_back(bullet);
+}
+
+void Enemy::ShootMegabossSpread() {
+    std::array<std::pair<int, int>, 3> directions = {{{-1, 0}, {0, 1}, {1, 0}}};
     for (const auto& dir : directions) {
         Bullet bullet;
-        bullet.pos = {pos.x + 1, pos.y + 1};  // Center on enemy
+        bullet.pos = {pos.x, pos.y};
         bullet.dx = dir.first;
         bullet.dy = dir.second;
+        bullet.length = 3;  // Three units long
         bullet.active = true;
         bullets.push_back(bullet);
     }
@@ -227,24 +297,44 @@ void Enemy::TakeDamage(int damage) {
     }
 }
 
-char Enemy::GetSymbol() const {
+std::string Enemy::GetSymbol() const {
     switch (type) {
         case EnemyType::REGULAR:
-            return 'v';
+            return "▼";
         case EnemyType::ELITE:
-            // Show health status for elite enemies
-            if (health == 3) return 'A';
-            else if (health == 2) return '^';
-            else return 'V';
-        case EnemyType::BOSS:
-            // Show health status for boss (different symbols)
-            if (health > 7) return 'B';
-            else if (health > 4) return 'b';
-            else return 'X';
+            return "▲";
+        case EnemyType::BOSS: {
+            int lost = max_health - health;
+            std::string symbol = "■";
+            int stage = std::min(4, lost / 2);
+            switch (stage) {
+                case 0: symbol = "■"; break;
+                case 1: symbol = "🞓"; break;
+                case 2: symbol = "🞒"; break;
+                case 3: symbol = "🞑"; break;
+                default: symbol = "🞏"; break;
+            }
+            std::string result;
+            for (int i = 0; i < 2; ++i) {
+                result += symbol;
+            }
+            return result;
+        }
         case EnemyType::CIRCLE_SHOOTER:
-            return 'O';  // Circle symbol
+            if (health > max_health / 2) return "◉";
+            else return "🞅";
+        case EnemyType::MEGABOSS: {
+            int lost = max_health - health;
+            int symbols = 6 - (lost / (max_health / 6));
+            if (symbols < 0) symbols = 0;
+            std::string result;
+            for (int i = 0; i < symbols; ++i) {
+                result += "🞚";
+            }
+            return result;
+        }
         default:
-            return 'v';
+            return "▼";
     }
 }
 
@@ -253,20 +343,13 @@ ftxui::Color Enemy::GetColor() const {
         case EnemyType::REGULAR:
             return ftxui::Color::Red;
         case EnemyType::ELITE:
-            // Color changes with health
-            if (health == 3) return ftxui::Color::Yellow;
-            else if (health == 2) return ftxui::Color::Magenta;
-            else return ftxui::Color::Red;
-            break;
+            return ftxui::Color::Yellow;
         case EnemyType::BOSS:
-            // Boss has distinct colors
-            if (health > 7) return ftxui::Color::Magenta;
-            else if (health > 4) return ftxui::Color::Cyan;
-            else return ftxui::Color::Red;
-            break;
+            return ftxui::Color::Magenta;
         case EnemyType::CIRCLE_SHOOTER:
-            return ftxui::Color::Green;
-            break;
+            return ftxui::Color::Blue;
+        case EnemyType::MEGABOSS:
+            return ftxui::Color::Red;  // Distinctive color for megaboss
         default:
             return ftxui::Color::Red;
     }
@@ -275,30 +358,15 @@ ftxui::Color Enemy::GetColor() const {
 void Enemy::Draw(ftxui::Canvas& canvas) const {
     if (!IsAlive()) return;
 
-    std::vector<std::string> sprite;
-    switch (type) {
-        case EnemyType::REGULAR:
-            sprite = {" /\\ ", "/--\\", "\\__/"};
-            break;
-        case EnemyType::ELITE:
-            sprite = {" /^^\\ ", "/<-->\\ ", "\\____/"};
-            break;
-        case EnemyType::BOSS:
-            sprite = {" /^^^^\\ ", "/[BOSS]\\ ", "\\_____/ "};
-            break;
-        case EnemyType::CIRCLE_SHOOTER:
-            sprite = {" /\\ ", "/()\\", "\\__/"};
-            break;
-    }
+    canvas.DrawText(pos.x, pos.y, GetSymbol(), GetColor());
 
-    for (size_t dy = 0; dy < sprite.size(); ++dy) {
-        canvas.DrawText(pos.x, pos.y + static_cast<int>(dy), sprite[dy], GetColor());
-    }
-
-    // Draw bullets
-    for (const auto& bullet : bullets) {
-        if (bullet.active) {
+    if (type == EnemyType::BOSS || type == EnemyType::CIRCLE_SHOOTER || type == EnemyType::MEGABOSS) {
+        for (const auto& bullet : bullets) {
+            if (!bullet.active) continue;
             canvas.DrawText(bullet.pos.x, bullet.pos.y, "*", ftxui::Color::Red);
+            if (bullet.length > 1) {
+                canvas.DrawText(bullet.pos.x + bullet.dx, bullet.pos.y + bullet.dy, "*", ftxui::Color::Red);
+            }
         }
     }
 }
@@ -318,4 +386,8 @@ Enemy CreateBossEnemy(Position pos) {
 
 Enemy CreateCircleShooterEnemy(Position pos) {
     return Enemy(EnemyType::CIRCLE_SHOOTER, pos);
+}
+
+Enemy CreateMegabossEnemy(Position pos) {
+    return Enemy(EnemyType::MEGABOSS, pos);
 }

@@ -19,6 +19,7 @@ struct Bullet {
     bool active = true;
     int dx = 0;
     int dy = -1;
+    int length = 1;
     int lifetime = 0;
     int explode_timer = 0;
     BulletType type = BulletType::NORMAL;
@@ -28,7 +29,8 @@ enum class EnemyType {
     REGULAR,  // Basic enemy - 1 hit to kill, standard movement
     ELITE,    // Elite enemy - 3 hits to kill, random movement
     BOSS,     // Boss enemy - 10 hits to kill, fast random movement, can shoot
-    CIRCLE_SHOOTER  // New enemy - shoots expanding circle of bullets
+    CIRCLE_SHOOTER,  // Shoots an expanding circle of bullets every 240 frames
+    MEGABOSS  // Mega boss - 20 hits to kill, shoots bullets at player
 };
 
 struct Enemy {
@@ -52,10 +54,10 @@ struct Enemy {
     Enemy(EnemyType t, Position p);
 
     // Methods for enemy behavior
-    void Update();  // Update enemy state (movement, shooting, etc.)
+    void Update(Position player_pos);  // Update enemy state (movement, shooting, etc.)
     void TakeDamage(int damage = 1);
     bool IsAlive() const { return alive && health > 0; }
-    char GetSymbol() const;
+    std::string GetSymbol() const;
     ftxui::Color GetColor() const;
     void Draw(ftxui::Canvas& canvas) const;
 
@@ -63,10 +65,17 @@ private:
     void UpdateRegular();
     void UpdateElite();
     void UpdateBoss();
+    void UpdateCircleShooter();
+    void UpdateMegaboss(Position player_pos);
     void ShootBullet();
+    void ShootCircle();
+    void ShootAtPlayer(Position player_pos);
+    void ShootMegabossSpread();
 };
 
 // Enemy factory functions
 Enemy CreateRegularEnemy(Position pos);
 Enemy CreateEliteEnemy(Position pos);
 Enemy CreateBossEnemy(Position pos);
+Enemy CreateCircleShooterEnemy(Position pos);
+Enemy CreateMegabossEnemy(Position pos);
