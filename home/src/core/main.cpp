@@ -42,15 +42,24 @@ int main() {
         std::vector<std::string> menu_items = {"Start Game", "Scoreboard"};
 
         Elements menu_elements;
-        menu_elements.push_back(text("SPACE INVADERS") | bold | color(Color::Cyan) | center);
-        menu_elements.push_back(separator());
+        menu_elements.push_back(text("  ███████╗██████╗  █████╗  ██████╗███████╗    ███████╗██╗  ██╗ ██████╗  ██████╗ ████████╗███████╗██████╗ ") | bold | color(Color::Red) | center);
+        menu_elements.push_back(text("  ██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝    ██╔════╝██║  ██║██╔═══██╗██╔═══██╗╚══██╔══╝██╔════╝██╔══██╗") | bold | color(Color::Red) | center);
+        menu_elements.push_back(text("  ███████╗██████╔╝███████║██║     █████╗      ███████╗███████║██║   ██║██║   ██║   ██║   █████╗  ██████╔╝") | bold | color(Color::Red) | center);
+        menu_elements.push_back(text("  ╚════██║██╔═══╝ ██╔══██║██║     ██╔══╝      ╚════██║██╔══██║██║   ██║██║   ██║   ██║   ██╔══╝  ██╔══██╗") | bold | color(Color::Red) | center);
+        menu_elements.push_back(text("  ███████║██║     ██║  ██║╚██████╗███████╗    ███████║██║  ██║╚██████╔╝╚██████╔╝   ██║   ███████╗██║  ██║") | bold | color(Color::Red) | center);
+        menu_elements.push_back(text("  ╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚══════╝╚═╝  ╚═╝") | bold | color(Color::Red) | center);
         menu_elements.push_back(text(""));
 
         for (size_t i = 0; i < menu_items.size(); ++i) {
+            auto button = text("    " + menu_items[i] + "    ") | bold | center;
             if (static_cast<int>(i) == selected_menu_item) {
-                menu_elements.push_back(text("▶ " + menu_items[i]) | color(Color::Yellow) | bold);
+                button = button | bgcolor(Color::Blue) | color(Color::White) | bold;
             } else {
-                menu_elements.push_back(text("  " + menu_items[i]) | color(Color::White));
+                button = button | bgcolor(Color::DarkBlue) | color(Color::White);
+            }
+            menu_elements.push_back(button | hcenter);
+            if (i + 1 < menu_items.size()) {
+                menu_elements.push_back(text(""));
             }
         }
 
@@ -58,7 +67,7 @@ int main() {
         menu_elements.push_back(text("Use ↑↓ to navigate, Enter to select") | color(Color::GrayLight) | center);
         menu_elements.push_back(text("ESC to quit") | color(Color::GrayLight) | center);
 
-        return vbox(std::move(menu_elements)) | center | border | color(Color::White);
+        return vbox(std::move(menu_elements)) | center | border | color(Color::White) | bgcolor(Color::RGB(16, 16, 16));
     });
 
     // Scoreboard renderer

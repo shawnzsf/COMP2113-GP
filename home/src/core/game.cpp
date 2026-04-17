@@ -22,6 +22,7 @@ void Game::SpawnEnemies() {
     // Enemy type probabilities (higher wave = more elite/boss enemies)
     int boss_chance = std::min(5 + wave, 15);     // 5% base, up to 15%
     int elite_chance = std::min(10 + wave * 2, 30); // 10% base, up to 30%
+    int circle_shooter_chance = std::min(5 + wave, 10); // 5% base, up to 10%
     // Regular enemies get the remainder
 
     for (int i = 0; i < enemy_count && i < 20; ++i) {  // Cap at 20 enemies
@@ -37,6 +38,9 @@ void Game::SpawnEnemies() {
         } else if (rand_val < boss_chance + elite_chance) {
             // Elite enemy (medium frequency)
             enemy = CreateEliteEnemy(pos);
+        } else if (rand_val < boss_chance + elite_chance + circle_shooter_chance) {
+            // Circle shooter
+            enemy = CreateCircleShooterEnemy(pos);
         } else {
             // Regular enemy (most frequent)
             enemy = CreateRegularEnemy(pos);
@@ -356,6 +360,10 @@ void Game::CheckCollisions() {
                             score += POINTS_BOSS_ENEMY;
                             cash += 50;
                             break;
+                        case EnemyType::CIRCLE_SHOOTER:
+                            score += 25;  // Points for circle shooter
+                            cash += 20;
+                            break;
                     }
                 }
 
@@ -372,6 +380,29 @@ void Game::CheckCollisions() {
                     Position player_pos = player.GetPosition();
                     if (std::abs(boss_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
                         std::abs(boss_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
+
+                        // Player takes damage (shield will absorb if active)
+                        player.TakeDamage(1);
+
+                        // Check if player is still alive
+                        if (!player.IsAlive()) {
+                            game_over = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check collisions between circle shooter bullets and player
+    for (auto& e : enemies) {
+        if (e.type == EnemyType::CIRCLE_SHOOTER) {
+            for (const auto& cs_bullet : e.bullets) {
+                if (cs_bullet.active) {
+                    Position player_pos = player.GetPosition();
+                    if (std::abs(cs_bullet.pos.x - player_pos.x) <= COLLISION_RADIUS &&
+                        std::abs(cs_bullet.pos.y - player_pos.y) <= COLLISION_RADIUS) {
 
                         // Player takes damage (shield will absorb if active)
                         player.TakeDamage(1);
@@ -450,7 +481,10 @@ void Game::Draw(ftxui::Canvas& canvas) {
     canvas.DrawText(2, 1, score_text, ftxui::Color::Yellow);
     canvas.DrawText(2, 5, cash_text, ftxui::Color::Green);
     canvas.DrawText(WIDTH / 2 - 8, 1, wave_text, ftxui::Color::Cyan);
-    canvas.DrawText(WIDTH - 30, 1, enemies_text, ftxui::Color::Magenta);
+    canvas.DrawText(WIDTH - 40, 1, enemies_text, ftxui::Color::Magenta);
+
+    std::string hp_text = "HP: " + std::to_string(player.GetHealth()) + "/" + std::to_string(player.GetMaxHealth());
+    canvas.DrawText(WIDTH - static_cast<int>(hp_text.size()) - 2, 1, hp_text, ftxui::Color::Red);
 
     // Draw game over message
     if (game_over) {
@@ -504,4 +538,12 @@ WeaponType Game::GetWeaponType() const {
 
 bool Game::HasShield() const {
     return player.HasShield();
+}
+
+int Game::GetHealth() const {
+    return player.GetHealth();
+}
+
+int Game::GetMaxHealth() const {
+    return player.GetMaxHealth();
 }

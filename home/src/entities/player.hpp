@@ -35,8 +35,8 @@ public:
     // Constants
     static constexpr int MAX_HEALTH = 3;
     static constexpr int MOVE_SPEED = 2;
-    static constexpr int WIDTH = 3;
-    static constexpr int HEIGHT = 2;
+    static constexpr int WIDTH = 4;
+    static constexpr int HEIGHT = 3;
 
 private:
     Position pos;

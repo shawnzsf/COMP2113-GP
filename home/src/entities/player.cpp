@@ -17,15 +17,23 @@ void Player::Update() {
 
 void Player::Draw(ftxui::Canvas& canvas) const {
     // Draw Player (ship that can move in all directions)
-    canvas.DrawText(pos.x, pos.y, "▲", ftxui::Color::Cyan);
+    std::vector<std::string> sprite = {
+        " /\\ ",
+        "/++\\",
+        " || "
+    };
+
+    for (size_t dy = 0; dy < sprite.size(); ++dy) {
+        canvas.DrawText(pos.x, pos.y + static_cast<int>(dy), sprite[dy], ftxui::Color::Cyan);
+    }
 
     if (shield_active) {
         // Draw circular shield border around player
-        int radius = 3;
+        int radius = 4;  // Adjusted for larger sprite
         for (int angle = 0; angle < 360; angle += 10) {  // Draw points every 10 degrees for smoother circle
             double rad = angle * 3.14159 / 180.0;
-            int x = pos.x + static_cast<int>(radius * cos(rad));
-            int y = pos.y + static_cast<int>(radius * sin(rad));
+            int x = pos.x + 2 + static_cast<int>(radius * cos(rad));  // Center on sprite
+            int y = pos.y + 1 + static_cast<int>(radius * sin(rad));
             if ((screen_width == 0 || (x >= 0 && x < screen_width)) &&
                 (screen_height == 0 || (y >= 0 && y < screen_height))) {
                 canvas.DrawText(x, y, "○", ftxui::Color::Cyan);  // Use a circle symbol
@@ -40,7 +48,7 @@ void Player::MoveLeft() {
 
 void Player::MoveRight() {
     if (screen_width > 0) {
-        pos.x = std::min(screen_width - 5, pos.x + MOVE_SPEED);
+        pos.x = std::min(screen_width - WIDTH - 1, pos.x + MOVE_SPEED);
     } else {
         pos.x += MOVE_SPEED;
     }
@@ -52,7 +60,7 @@ void Player::MoveUp() {
 
 void Player::MoveDown() {
     if (screen_height > 0) {
-        pos.y = std::min(screen_height - 5, pos.y + MOVE_SPEED);
+        pos.y = std::min(screen_height - HEIGHT - 1, pos.y + MOVE_SPEED);
     } else {
         pos.y += MOVE_SPEED;
     }

@@ -20,6 +20,11 @@ Enemy::Enemy(EnemyType t, Position p) : pos(p), type(t) {
             health = 10;
             shoot_cooldown = 0;
             break;
+        case EnemyType::CIRCLE_SHOOTER:
+            max_health = 2;
+            health = 2;
+            shoot_cooldown = 0;
+            break;
     }
 }
 
@@ -36,6 +41,9 @@ void Enemy::Update() {
         case EnemyType::BOSS:
             UpdateBoss();
             break;
+        case EnemyType::CIRCLE_SHOOTER:
+            UpdateCircleShooter();
+            break;
     }
 
     // Update bullets for boss
@@ -44,6 +52,26 @@ void Enemy::Update() {
             if (bullet.active) {
                 bullet.pos.y += 1;  // Boss bullets move down
                 if (bullet.pos.y > 125) {  // Off screen
+                    bullet.active = false;
+                }
+            }
+        }
+
+        // Remove inactive bullets
+        bullets.erase(
+            std::remove_if(bullets.begin(), bullets.end(),
+                [](const Bullet& b) { return !b.active; }),
+            bullets.end()
+        );
+    }
+
+    // Update bullets for circle shooter
+    if (type == EnemyType::CIRCLE_SHOOTER) {
+        for (auto& bullet : bullets) {
+            if (bullet.active) {
+                bullet.pos.x += bullet.dx;
+                bullet.pos.y += bullet.dy;
+                if (bullet.pos.y > 125 || bullet.pos.x < 0 || bullet.pos.x > 170) {
                     bullet.active = false;
                 }
             }
@@ -150,11 +178,46 @@ void Enemy::UpdateBoss() {
     }
 }
 
+void Enemy::UpdateCircleShooter() {
+    move_timer++;
+
+    // Circle shooter moves like regular enemy (formation movement)
+    // But shoots in a circle every 120 frames
+
+    if (shoot_cooldown > 0) {
+        shoot_cooldown--;
+    } else {
+        // Shoot every 120 frames
+        if (move_timer % 120 == 0) {
+            ShootCircle();
+            shoot_cooldown = 120;  // Cooldown
+        }
+    }
+}
+
 void Enemy::ShootBullet() {
     Bullet bullet;
     bullet.pos = {pos.x, pos.y + 2};  // Shoot from below the boss
     bullet.active = true;
     bullets.push_back(bullet);
+}
+
+void Enemy::ShootCircle() {
+    // Shoot bullets in 8 directions (circle)
+    const std::vector<std::pair<int, int>> directions = {
+        {-1, -1}, {0, -1}, {1, -1},
+        {-1, 0},           {1, 0},
+        {-1, 1},  {0, 1},  {1, 1}
+    };
+
+    for (const auto& dir : directions) {
+        Bullet bullet;
+        bullet.pos = {pos.x + 1, pos.y + 1};  // Center on enemy
+        bullet.dx = dir.first;
+        bullet.dy = dir.second;
+        bullet.active = true;
+        bullets.push_back(bullet);
+    }
 }
 
 void Enemy::TakeDamage(int damage) {
@@ -178,6 +241,8 @@ char Enemy::GetSymbol() const {
             if (health > 7) return 'B';
             else if (health > 4) return 'b';
             else return 'X';
+        case EnemyType::CIRCLE_SHOOTER:
+            return 'O';  // Circle symbol
         default:
             return 'v';
     }
@@ -199,6 +264,9 @@ ftxui::Color Enemy::GetColor() const {
             else if (health > 4) return ftxui::Color::Cyan;
             else return ftxui::Color::Red;
             break;
+        case EnemyType::CIRCLE_SHOOTER:
+            return ftxui::Color::Green;
+            break;
         default:
             return ftxui::Color::Red;
     }
@@ -207,14 +275,30 @@ ftxui::Color Enemy::GetColor() const {
 void Enemy::Draw(ftxui::Canvas& canvas) const {
     if (!IsAlive()) return;
 
-    canvas.DrawText(pos.x, pos.y, std::string(1, GetSymbol()), GetColor());
+    std::vector<std::string> sprite;
+    switch (type) {
+        case EnemyType::REGULAR:
+            sprite = {" /\\ ", "/--\\", "\\__/"};
+            break;
+        case EnemyType::ELITE:
+            sprite = {" /^^\\ ", "/<-->\\ ", "\\____/"};
+            break;
+        case EnemyType::BOSS:
+            sprite = {" /^^^^\\ ", "/[BOSS]\\ ", "\\_____/ "};
+            break;
+        case EnemyType::CIRCLE_SHOOTER:
+            sprite = {" /\\ ", "/()\\", "\\__/"};
+            break;
+    }
 
-    // Draw boss bullets
-    if (type == EnemyType::BOSS) {
-        for (const auto& bullet : bullets) {
-            if (bullet.active) {
-                canvas.DrawText(bullet.pos.x, bullet.pos.y, "*", ftxui::Color::Red);
-            }
+    for (size_t dy = 0; dy < sprite.size(); ++dy) {
+        canvas.DrawText(pos.x, pos.y + static_cast<int>(dy), sprite[dy], GetColor());
+    }
+
+    // Draw bullets
+    for (const auto& bullet : bullets) {
+        if (bullet.active) {
+            canvas.DrawText(bullet.pos.x, bullet.pos.y, "*", ftxui::Color::Red);
         }
     }
 }
@@ -230,4 +314,8 @@ Enemy CreateEliteEnemy(Position pos) {
 
 Enemy CreateBossEnemy(Position pos) {
     return Enemy(EnemyType::BOSS, pos);
+}
+
+Enemy CreateCircleShooterEnemy(Position pos) {
+    return Enemy(EnemyType::CIRCLE_SHOOTER, pos);
 }

@@ -27,7 +27,8 @@ struct Bullet {
 enum class EnemyType {
     REGULAR,  // Basic enemy - 1 hit to kill, standard movement
     ELITE,    // Elite enemy - 3 hits to kill, random movement
-    BOSS      // Boss enemy - 10 hits to kill, fast random movement, can shoot
+    BOSS,     // Boss enemy - 10 hits to kill, fast random movement, can shoot
+    CIRCLE_SHOOTER  // New enemy - shoots expanding circle of bullets
 };
 
 struct Enemy {
