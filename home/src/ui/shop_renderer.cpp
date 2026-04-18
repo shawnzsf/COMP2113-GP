@@ -70,10 +70,25 @@ Element ShopRenderer::Render(Game& game, Shop& shop, ItemCategory category,
             // Determine item status
             std::string status_text;
             Color item_color = Color::White;
-            bool is_selectable = !item.owned;
+            bool is_selectable = shop.CanPurchase(item);
 
-            if (item.owned && !item.can_stack) {
-                status_text = " [OWNED - ENTER to use]";
+            if (item.owned && item.max_upgrade_level > 0) {
+                // Ability with upgrade levels
+                if (item.upgrade_level >= item.max_upgrade_level) {
+                    status_text = " [MAX LEVEL]";
+                    item_color = Color::Green;
+                    is_selectable = false;
+                } else {
+                    status_text = " [Lv." + std::to_string(item.upgrade_level) + "/" + std::to_string(item.max_upgrade_level) + "]";
+                    item_color = Color::Cyan;
+                }
+            } else if ((item.owned || item.can_stack) && item.quantity > 0) {
+                // Stackable item with quantity
+                status_text = " [x" + std::to_string(item.quantity) + "/" + std::to_string(item.max_quantity) + "]";
+                item_color = Color::Cyan;
+                is_selectable = shop.CanAfford(item, game.GetCash()) && item.quantity < item.max_quantity;
+            } else if (item.owned && !item.can_stack) {
+                status_text = " [OWNED]";
                 item_color = Color::Green;
                 is_selectable = true;
             } else if (item.owned && item.can_stack) {
@@ -196,10 +211,25 @@ Element ShopRenderer::RenderShopOnly(Game& game, Shop& shop, ItemCategory catego
 
                 std::string status_text;
                 Color item_color = Color::White;
-                bool is_selectable = !item.owned;
+                bool is_selectable = shop.CanPurchase(item);
 
-                if (item.owned && !item.can_stack) {
-                    status_text = " [OWNED - ENTER to use]";
+                if (item.owned && item.max_upgrade_level > 0) {
+                    // Ability with upgrade levels
+                    if (item.upgrade_level >= item.max_upgrade_level) {
+                        status_text = " [MAX LEVEL]";
+                        item_color = Color::Green;
+                        is_selectable = false;
+                    } else {
+                        status_text = " [Lv." + std::to_string(item.upgrade_level) + "/" + std::to_string(item.max_upgrade_level) + "]";
+                        item_color = Color::Cyan;
+                    }
+                } else if ((item.owned || item.can_stack) && item.quantity > 0) {
+                    // Stackable item with quantity
+                    status_text = " [x" + std::to_string(item.quantity) + "/" + std::to_string(item.max_quantity) + "]";
+                    item_color = Color::Cyan;
+                    is_selectable = shop.CanAfford(item, game.GetCash()) && item.quantity < item.max_quantity;
+                } else if (item.owned && !item.can_stack) {
+                    status_text = " [OWNED]";
                     item_color = Color::Green;
                     is_selectable = true;
                 } else if (item.owned && item.can_stack) {

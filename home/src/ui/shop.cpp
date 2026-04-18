@@ -7,38 +7,37 @@ Shop::Shop() {
 void Shop::InitializeItems() {
     items.clear();
 
-    // WEAPONS (firing patterns)
-    items.push_back({"Dual Shot", "Fire two bullets simultaneously", 100, ItemCategory::WEAPON, false, false});
-    items.push_back({"Tri Shot", "Fire three bullets in a spread", 300, ItemCategory::WEAPON, false, false});
+    // WEAPONS (firing patterns) - one-time purchase
+    items.push_back({"Dual Shot", "Fire two bullets simultaneously", 100, ItemCategory::WEAPON, false, false, 0, 1, 0, 0});
+    items.push_back({"Tri Shot", "Fire three bullets in a spread", 300, ItemCategory::WEAPON, false, false, 0, 1, 0, 0});
 
-    // BULLETS (bullet types and upgrades)
-    // Unlockable bullet types
-    items.push_back({"Unlock Explosive", "Unlock explosive bullets (cannot be used with Dual/Tri Shot, Press 2 to activate)", 300, ItemCategory::BULLET, false, false});
-    items.push_back({"Unlock Piercing", "Unlock piercing bullets (Press 3 to activate)", 500, ItemCategory::BULLET, false, false});
+    // BULLETS - Unlockable bullet types (one-time purchase)
+    items.push_back({"Unlock Explosive", "Unlock explosive bullets", 300, ItemCategory::BULLET, false, false, 0, 1, 0, 0});
+    items.push_back({"Unlock Piercing", "Unlock piercing bullets", 500, ItemCategory::BULLET, false, false, 0, 1, 0, 0});
 
-    // Basic bullet upgrades
-    items.push_back({"Basic Damage +1", "Increase basic bullet damage", 100, ItemCategory::BULLET, false, true});
-    items.push_back({"Basic Speed +1", "Increase basic bullet speed", 120, ItemCategory::BULLET, false, true});
+    // Basic bullet upgrades (stackable, max 5)
+    items.push_back({"Basic Damage +1", "Increase basic bullet damage", 50, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
+    items.push_back({"Basic Speed +1", "Increase basic bullet speed", 60, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
 
-    // Explosive bullet upgrades (choose one at a time)
-    items.push_back({"Explosive Damage +1", "Increase explosive bullet damage", 120, ItemCategory::BULLET, false, true});
-    items.push_back({"Explosive Radius +1", "Increase blast radius", 120, ItemCategory::BULLET, false, true});
+    // Explosive bullet upgrades (stackable, max 5)
+    items.push_back({"Explosive Damage +1", "Increase explosive bullet damage", 60, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
+    items.push_back({"Explosive Radius +1", "Increase blast radius", 60, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
 
-    // Piercing bullet upgrades (choose one at a time)
-    items.push_back({"Piercing Damage +1", "Increase piercing bullet damage", 100, ItemCategory::BULLET, false, true});
-    items.push_back({"Piercing Penetra. +1", "Increase penetration count", 120, ItemCategory::BULLET, false, true});
+    // Piercing bullet upgrades (stackable, max 5)
+    items.push_back({"Piercing Damage +1", "Increase piercing bullet damage", 50, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
+    items.push_back({"Piercing Penetra. +1", "Increase penetration count", 60, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
 
-    // ITEMS (one-time use consumables)
-    items.push_back({"Speed Boost", "+50% speed for 10 seconds", 30, ItemCategory::ITEM, false, false});
-    items.push_back({"Health Pack", "Restore 1 HP instantly", 40, ItemCategory::ITEM, false, false});
-    items.push_back({"Shield Pack", "Shield for 30 seconds", 50, ItemCategory::ITEM, false, false});
-    items.push_back({"Damage Boost", "2x damage for 8 seconds", 45, ItemCategory::ITEM, false, false});
+    // ITEMS (consumables - limited quantity, max 3 each)
+    items.push_back({"Speed Boost", "+50% speed for 10 seconds", 30, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
+    items.push_back({"Health Pack", "Restore 1 HP instantly", 40, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
+    items.push_back({"Shield Pack", "Shield for 30 seconds", 50, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
+    items.push_back({"Damage Boost", "2x damage for 8 seconds", 45, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
 
-    // ABILITIES
-    items.push_back({"Shield Barrier", "Create a protective shield", 75, ItemCategory::ABILITY, false, false});
-    items.push_back({"Rapid Fire", "Double your fire rate", 120, ItemCategory::ABILITY, false, false});
-    items.push_back({"Time Slow", "Slow down enemies temporarily", 150, ItemCategory::ABILITY, false, false});
-    items.push_back({"Freeze", "Freeze all enemies for 5 seconds", 180, ItemCategory::ABILITY, false, false});
+    // ABILITIES (one-time purchase, upgradable - max level 3)
+    items.push_back({"Shield Barrier", "Create a protective shield", 75, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
+    items.push_back({"Rapid Fire", "Double your fire rate", 120, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
+    items.push_back({"Time Slow", "Slow down enemies temporarily", 150, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
+    items.push_back({"Freeze", "Freeze all enemies for 5 seconds", 180, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
 }
 
 const std::vector<ShopItem>& Shop::GetAllItems() const {
@@ -59,18 +58,42 @@ bool Shop::CanAfford(const ShopItem& item, int cash) const {
     return cash >= item.cost;
 }
 
-bool Shop::PurchaseItem(ShopItem& item, int& cash) {
-    if (!CanAfford(item, cash)) {
+// Check if item can be purchased (respects limits)
+bool Shop::CanPurchase(const ShopItem& item) const {
+    if (item.owned && !item.can_stack) {
+        // One-time purchase item already owned
         return false;
     }
-    
+    if (item.max_quantity > 0 && item.quantity >= item.max_quantity) {
+        // Reached max quantity for this item
+        return false;
+    }
+    if (item.max_upgrade_level > 0 && item.upgrade_level >= item.max_upgrade_level) {
+        // Reached max upgrade level
+        return false;
+    }
+    return true;
+}
+
+bool Shop::PurchaseItem(ShopItem& item, int& cash) {
+    if (!CanAfford(item, cash) || !CanPurchase(item)) {
+        return false;
+    }
+
     cash -= item.cost;
-    
-    // Only mark as owned if not stackable (stackable items stay available)
-    if (!item.can_stack) {
+
+    if (item.can_stack) {
+        // Stackable item: increase quantity
+        item.quantity++;
+    } else if (item.max_upgrade_level > 0) {
+        // Upgradeable ability: increase level
+        item.upgrade_level++;
+        item.owned = true;
+    } else {
+        // One-time purchase
         item.owned = true;
     }
-    
+
     return true;
 }
 

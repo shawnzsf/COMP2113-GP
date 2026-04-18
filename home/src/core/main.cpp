@@ -353,12 +353,16 @@ int main() {
                                     // One-time use items - apply immediately
                                     if (item.name == "Speed Boost") {
                                         game.BuySpeedBoost(item.cost);
+                                        item.quantity++;
                                     } else if (item.name == "Health Pack") {
                                         game.BuyHealthPack(item.cost);
+                                        item.quantity++;
                                     } else if (item.name == "Shield Pack") {
                                         game.BuyShieldPack(item.cost);
+                                        item.quantity++;
                                     } else if (item.name == "Damage Boost") {
                                         game.BuyDamageBoost(item.cost);
+                                        item.quantity++;
                                     }
                                 } else if (item.category == ItemCategory::ABILITY) {
                                     if (item.name == "Shield Barrier") {

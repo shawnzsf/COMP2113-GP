@@ -14,8 +14,12 @@ struct ShopItem {
     std::string description;
     int cost;
     ItemCategory category;
-    bool owned;
-    bool can_stack;  // Items like upgrades that can be purchased multiple times
+    bool owned;           // For one-time purchases (abilities)
+    bool can_stack;      // For stackable items (upgrades)
+    int quantity;        // How many owned (for consumables)
+    int max_quantity;    // Maximum allowed (0 = unlimited for upgrades, >0 = limit)
+    int upgrade_level;   // Current upgrade level (for abilities)
+    int max_upgrade_level; // Maximum upgrade level (0 = no upgrades)
 };
 
 class Shop {
@@ -30,7 +34,10 @@ public:
     
     // Check if player can afford item
     bool CanAfford(const ShopItem& item, int cash) const;
-    
+
+    // Check if item can be purchased (respects limits)
+    bool CanPurchase(const ShopItem& item) const;
+
     // Purchase an item
     bool PurchaseItem(ShopItem& item, int& cash);
     
