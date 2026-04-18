@@ -1,11 +1,23 @@
+/**
+ * @file menu.cpp
+ * @brief Menu rendering implementation
+ *
+ * Handles main menu, scoreboard, controls, game over,
+ * and difficulty selection rendering.
+ */
+
 #include "menu.hpp"
 #include "ftxui/dom/elements.hpp"
 #include "ftxui/dom/canvas.hpp"
 
 using namespace ftxui;
 
+// Constructor - initialize with high score reference
+// Inputs: HighScore& highscore | Outputs: None
 MenuRenderer::MenuRenderer(HighScore& highscore) : highscore(highscore) {}
 
+// Render main menu
+// Inputs: int selected_item | Outputs: Element (FTXUI renderable)
 Element MenuRenderer::RenderMainMenu(int selected_item) {
     std::vector<std::string> menu_items = {"Start Game", "Scoreboard", "Controls"};
 
@@ -38,6 +50,8 @@ Element MenuRenderer::RenderMainMenu(int selected_item) {
     return vbox(std::move(menu_elements)) | center | border | color(Color::White) | bgcolor(Color::RGB(16, 16, 16));
 }
 
+// Render scoreboard
+// Inputs: None | Outputs: Element
 Element MenuRenderer::RenderScoreboard() {
     const auto& top_scores = highscore.GetTopScores();
 
@@ -65,6 +79,8 @@ Element MenuRenderer::RenderScoreboard() {
     return vbox(std::move(scoreboard_elements)) | center | border | color(Color::White);
 }
 
+// Render controls page
+// Inputs: None | Outputs: Element
 Element MenuRenderer::RenderControls() {
     Elements controls_elements;
     controls_elements.push_back(text("CONTROLS & GAMEPLAY") | bold | color(Color::Yellow) | center);
@@ -107,6 +123,8 @@ Element MenuRenderer::RenderControls() {
     return vbox(std::move(controls_elements)) | center | border | color(Color::White);
 }
 
+// Render game over screen
+// Inputs: int score, int wave | Outputs: Element
 Element MenuRenderer::RenderGameOver(int score, int wave) {
     Elements go_elements;
 
@@ -142,6 +160,8 @@ Element MenuRenderer::RenderGameOver(int score, int wave) {
     return vbox(std::move(go_elements)) | center | color(Color::White) | bgcolor(Color::RGB(10, 10, 15));
 }
 
+// Render difficulty selection
+// Inputs: int selected_difficulty | Outputs: Element
 Element MenuRenderer::RenderDifficultySelect(int selected_difficulty) {
     Elements diff_elements;
 

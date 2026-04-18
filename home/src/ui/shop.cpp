@@ -1,3 +1,8 @@
+/**
+ * @file shop.cpp
+ * @brief Shop item management
+ */
+
 #include "shop.hpp"
 
 Shop::Shop() {

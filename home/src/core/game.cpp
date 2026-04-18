@@ -1,3 +1,12 @@
+/**
+ * @file game.cpp
+ * @brief Core game engine implementation
+ *
+ * This file contains the main Game class implementation.
+ * Handles: game initialization, update loop, enemy spawning,
+ * collision detection, wave progression, and random events.
+ */
+
 #include "game.hpp"
 #include "types.hpp"
 #include "ftxui/dom/elements.hpp"
@@ -7,6 +16,8 @@
 #include <ctime>
 #include <cmath>
 
+// Game constructor - initializes a new game session
+// Inputs: None | Outputs: None
 Game::Game() {
     srand(time(nullptr));  // Initialize random seed
     player.SetBounds(WIDTH, HEIGHT);
@@ -24,6 +35,8 @@ Game::Game() {
     SpawnEnemies();
 }
 
+// Spawn enemies for the current wave using toughness system
+// Inputs: None (uses current wave number) | Outputs: None (populates enemies vector)
 void Game::SpawnEnemies() {
     enemies.clear();
 
@@ -131,6 +144,8 @@ void Game::SpawnEnemies() {
     }
 }
 
+// Handle user keyboard input for movement, shooting, weapon switching
+// Inputs: const ftxui::Event& event | Outputs: bool (true if handled)
 bool Game::HandleEvent(const ftxui::Event& event) {
     if (game_over) {
         return event == ftxui::Event::Character('q') ||
@@ -219,6 +234,8 @@ bool Game::HandleEvent(const ftxui::Event& event) {
     return handled;
 }
 
+// Main game update loop - called every frame (~60 FPS)
+// Inputs: None | Outputs: None
 void Game::Update() {
     if (game_over) return;
 
@@ -309,6 +326,8 @@ void Game::Update() {
     }
 }
 
+// Move all player bullets upward, remove off-screen bullets
+// Inputs: None | Outputs: None
 void Game::MoveBullets() {
     // Limit total bullets to prevent performance issues
     const int MAX_BULLETS = 200;
@@ -389,6 +408,8 @@ void Game::FireWeapon() {
     }
 }
 
+// Move all enemies, update state, handle shooting patterns
+// Inputs: None | Outputs: None
 void Game::MoveEnemies() {
     // Handle formation movement for regular enemies
     static int direction = 1;
@@ -447,6 +468,8 @@ void Game::MoveEnemies() {
     }
 }
 
+// Check bullet-enemy and enemy bullet-player collisions
+// Inputs: None | Outputs: None
 void Game::CheckCollisions() {
     // Calculate difficulty multiplier for rewards
     int difficulty = GetDifficultyMultiplier();
@@ -553,6 +576,8 @@ void Game::CheckCollisions() {
     }
 }
 
+// Check if wave complete, increment wave, spawn new enemies
+// Inputs: None | Outputs: None
 void Game::UpdateWave() {
     // Check if all enemies are defeated
     bool all_defeated = true;
@@ -577,6 +602,8 @@ void Game::UpdateWave() {
     }
 }
 
+// Draw player, bullets, enemies to canvas
+// Inputs: ftxui::Canvas& canvas | Outputs: None
 void Game::Draw(ftxui::Canvas& canvas) {
     // Draw border
     // for (int x = 0; x < WIDTH; ++x) {
@@ -626,21 +653,21 @@ void Game::Draw(ftxui::Canvas& canvas) {
     // Game over message is now shown in the dedicated game over screen (main.cpp)
 }
 
-bool Game::IsGameOver() const {
-    return game_over;
-}
+// Check if game is over (player dead)
+// Inputs: None | Outputs: bool (true if game over)
+bool Game::IsGameOver() const { return game_over; }
 
-int Game::GetScore() const {
-    return score;
-}
+// Get current score
+// Inputs: None | Outputs: int (current score)
+int Game::GetScore() const { return score; }
 
-int Game::GetWave() const {
-    return wave;
-}
+// Get current wave number
+// Inputs: None | Outputs: int (current wave)
+int Game::GetWave() const { return wave; }
 
-bool Game::CanAfford(int amount) const {
-    return cash >= amount;
-}
+// Check if player can afford an item
+// Inputs: int amount - cost to check | Outputs: bool (true if can afford)
+bool Game::CanAfford(int amount) const { return cash >= amount; }
 
 bool Game::BuyWeapon(WeaponType type, int cost) {
     if (type == weapon_type || !CanAfford(cost)) {

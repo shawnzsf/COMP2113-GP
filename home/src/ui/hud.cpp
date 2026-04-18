@@ -1,3 +1,8 @@
+/**
+ * @file hud.cpp
+ * @brief Heads-Up Display rendering
+ */
+
 #include "hud.hpp"
 #include "ftxui/dom/elements.hpp"
 #include <sstream>

@@ -1,3 +1,8 @@
+/**
+ * @file shop_renderer.cpp
+ * @brief Shop UI rendering
+ */
+
 #include "shop_renderer.hpp"
 #include "ftxui/dom/elements.hpp"
 

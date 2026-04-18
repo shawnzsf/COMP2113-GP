@@ -1,11 +1,25 @@
+/**
+ * @file weapon.cpp
+ * @brief Weapon implementation (Strategy pattern)
+ *
+ * Handles different weapon firing patterns:
+ * - BasicWeapon: single shot
+ * - DualWeapon: two bullets left/right
+ * - TriWeapon: three bullets spread
+ */
+
 #include "weapon.hpp"
 #include <cmath>
 #include <algorithm>
 
+// Check if weapon can use bullet type (override in subclasses)
+// Inputs: BulletType | Outputs: bool
 bool Weapon::CanUseBulletType(BulletType) const {
-    return true;  // Default: can use all bullet types
+    return true;  // Default: can use all
 }
 
+// Basic weapon fire - single bullet
+// Inputs: Position, BulletType, int damage | Outputs: std::vector<Bullet>
 std::vector<Bullet> BasicWeapon::Fire(Position player_pos, BulletType bullet_type, int damage) {
     std::vector<Bullet> bullets;
     Position pos = {player_pos.x + 1, player_pos.y - 1};
@@ -13,6 +27,8 @@ std::vector<Bullet> BasicWeapon::Fire(Position player_pos, BulletType bullet_typ
     return bullets;
 }
 
+// Dual weapon fire - two bullets (left and right)
+// Inputs: Position, BulletType, int damage | Outputs: std::vector<Bullet>
 std::vector<Bullet> DualWeapon::Fire(Position player_pos, BulletType bullet_type, int damage) {
     std::vector<Bullet> bullets;
     // Left bullet
@@ -30,6 +46,8 @@ std::vector<Bullet> DualWeapon::Fire(Position player_pos, BulletType bullet_type
     return bullets;
 }
 
+// Tri weapon fire - three bullets (spread)
+// Inputs: Position, BulletType, int damage | Outputs: std::vector<Bullet>
 std::vector<Bullet> TriWeapon::Fire(Position player_pos, BulletType bullet_type, int damage) {
     std::vector<Bullet> bullets;
 
@@ -54,6 +72,8 @@ std::vector<Bullet> TriWeapon::Fire(Position player_pos, BulletType bullet_type,
     return bullets;
 }
 
+// Explosive weapon fire - single explosive bullet
+// Inputs: Position, BulletType, int damage | Outputs: std::vector<Bullet>
 std::vector<Bullet> ExplosiveWeapon::Fire(Position player_pos, BulletType, int damage) {
     std::vector<Bullet> bullets;
     Position pos = {player_pos.x + 1, player_pos.y - 1};

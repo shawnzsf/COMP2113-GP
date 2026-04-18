@@ -1,3 +1,8 @@
+/**
+ * @file enemy.cpp
+ * @brief Enemy entity - 6 types with unique behaviors
+ */
+
 #include "enemy.hpp"
 #include <cstdlib>
 #include <ctime>

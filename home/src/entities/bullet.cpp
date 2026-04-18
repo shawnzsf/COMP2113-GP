@@ -1,7 +1,16 @@
+/**
+ * @file bullet.cpp
+ * @brief Bullet entity implementation
+ *
+ * Handles bullet types: Basic, Explosive, Piercing
+ */
+
 #include "bullet.hpp"
 #include <cmath>
 #include <algorithm>
 
+// Constructor - initialize bullet
+// Inputs: Position, BulletType, int damage | Outputs: None
 Bullet::Bullet(Position start_pos, BulletType bullet_type, int bullet_damage)
     : pos(start_pos), type(bullet_type), damage(bullet_damage) {
     active = true;
@@ -16,6 +25,11 @@ void Bullet::Update() {
     lifetime++;
 }
 
+// Update bullet position
+// Inputs: None | Outputs: None
+
+// Get bullet display symbol
+// Inputs: None | Outputs: std::string
 std::string Bullet::GetSymbol() const {
     if (type == BulletType::EXPLOSIVE) return "@";
     if (type == BulletType::PIERCING) return "╹";

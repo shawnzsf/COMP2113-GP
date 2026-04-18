@@ -1,3 +1,8 @@
+/**
+ * @file main.cpp
+ * @brief Main entry point - game loop and state management
+ */
+
 #include "game.hpp"
 #include "../data/highscore.hpp"
 #include "../ui/hud.hpp"
