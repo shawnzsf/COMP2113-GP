@@ -141,3 +141,38 @@ Element MenuRenderer::RenderGameOver(int score, int wave) {
 
     return vbox(std::move(go_elements)) | center | color(Color::White) | bgcolor(Color::RGB(10, 10, 15));
 }
+
+Element MenuRenderer::RenderDifficultySelect(int selected_difficulty) {
+    Elements diff_elements;
+
+    diff_elements.push_back(text("") | size(HEIGHT, EQUAL, 2));
+    diff_elements.push_back(text("╔═══════════════════════════════════════════════════════════════════╗") | bold | color(Color::Cyan) | center);
+    diff_elements.push_back(text("║             SELECT DIFFICULTY LEVEL                               ║") | bold | color(Color::Cyan) | center);
+    diff_elements.push_back(text("╚═══════════════════════════════════════════════════════════════════╝") | bold | color(Color::Cyan) | center);
+    diff_elements.push_back(text(""));
+
+    const char* difficulties[] = {"EASY", "MEDIUM", "HARD"};
+    const char* descriptions[] = {
+        "+50% Cash     | -30% Enemy HP   | -30% Enemy Damage",
+        "Normal Cash  | Normal Enemy HP | Normal Enemy Damage",
+        "-30% Cash    | +50% Enemy HP   | +50% Enemy Damage"
+    };
+    const Color colors[] = {Color::Green, Color::Yellow, Color::Red};
+
+    for (int i = 0; i < 3; ++i) {
+        std::string prefix = (i == selected_difficulty) ? "→ " : "  ";
+        if (i == selected_difficulty) {
+            diff_elements.push_back(text(prefix + difficulties[i]) | bold | bgcolor(Color::Blue) | color(Color::White));
+        } else {
+            diff_elements.push_back(text(prefix + difficulties[i]) | color(colors[i]));
+        }
+        diff_elements.push_back(text("    " + std::string(descriptions[i])) | color(Color::GrayLight));
+        diff_elements.push_back(text(""));
+    }
+
+    diff_elements.push_back(separator());
+    diff_elements.push_back(text("↑↓ Select difficulty | ENTER to confirm | ESC to go back") | color(Color::GrayLight) | center);
+    diff_elements.push_back(text(""));
+
+    return vbox(std::move(diff_elements)) | center | border | color(Color::White) | bgcolor(Color::RGB(10, 10, 15));
+}

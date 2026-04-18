@@ -20,6 +20,9 @@ public:
     // Render game over screen
     ftxui::Element RenderGameOver(int score, int wave);
 
+    // Render difficulty selection
+    ftxui::Element RenderDifficultySelect(int selected_difficulty);
+
 private:
     HighScore& highscore;
 };

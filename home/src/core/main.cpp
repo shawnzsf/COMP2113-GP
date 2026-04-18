@@ -26,6 +26,7 @@ int main() {
 
     GameState current_state = GameState::MainMenu;
     int selected_menu_item = 0;
+    int selected_difficulty = 1;  // Default to Medium
     std::string player_name = "Player";
     bool paused = false;
 
@@ -60,6 +61,11 @@ int main() {
     // Game Over renderer
     auto gameover_renderer = Renderer([&] {
         return menu_renderer.RenderGameOver(game.GetScore(), game.GetWave());
+    });
+
+    // Difficulty selection renderer
+    auto difficulty_renderer = Renderer([&] {
+        return menu_renderer.RenderDifficultySelect(selected_difficulty);
     });
 
     // Game renderer
@@ -104,6 +110,8 @@ int main() {
                 return game_renderer->Render();
             case GameState::GameOver:
                 return gameover_renderer->Render();
+            case GameState::DifficultySelect:
+                return difficulty_renderer->Render();
             default:
                 return text("Unknown state") | center;
         }
@@ -123,10 +131,7 @@ int main() {
                 }
                 if (event == Event::Return) {
                     if (selected_menu_item == 0) { // Start Game
-                        current_state = GameState::Playing;
-                        paused = false;
-                        shop_selected_item = 0;
-                        game = Game(); // Reset game
+                        current_state = GameState::DifficultySelect;
                     } else if (selected_menu_item == 1) { // Scoreboard
                         current_state = GameState::Scoreboard;
                     } else if (selected_menu_item == 2) { // Controls
@@ -406,6 +411,37 @@ int main() {
                 }
 
                 return handled;
+            }
+
+            case GameState::DifficultySelect: {
+                if (event == Event::ArrowUp) {
+                    selected_difficulty = (selected_difficulty - 1 + 3) % 3;
+                    return true;
+                }
+                if (event == Event::ArrowDown) {
+                    selected_difficulty = (selected_difficulty + 1) % 3;
+                    return true;
+                }
+                if (event == Event::Return) {
+                    // Set difficulty and start game
+                    if (selected_difficulty == 0) {
+                        game.SetDifficulty(DifficultyLevel::Easy);
+                    } else if (selected_difficulty == 1) {
+                        game.SetDifficulty(DifficultyLevel::Medium);
+                    } else {
+                        game.SetDifficulty(DifficultyLevel::Hard);
+                    }
+                    current_state = GameState::Playing;
+                    paused = false;
+                    shop_selected_item = 0;
+                    game = Game();  // Reset game
+                    return true;
+                }
+                if (event == Event::Escape) {
+                    current_state = GameState::MainMenu;
+                    return true;
+                }
+                break;
             }
 
             case GameState::GameOver: {

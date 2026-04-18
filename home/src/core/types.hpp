@@ -6,5 +6,13 @@ enum class GameState {
     Playing,
     Scoreboard,
     Controls,
-    GameOver
+    GameOver,
+    DifficultySelect
+};
+
+// Difficulty level for game balance
+enum class DifficultyLevel {
+    Easy,
+    Medium,
+    Hard
 };

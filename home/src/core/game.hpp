@@ -4,6 +4,7 @@
 #include "../entities/enemy.hpp"
 #include "../entities/player.hpp"
 #include "../weapons/weapon.hpp"
+#include "types.hpp"
 #include <vector>
 #include <string>
 #include <memory>
@@ -40,6 +41,12 @@ public:
     int GetCash() const;
     WeaponType GetWeaponType() const;
     void SetWeaponType(WeaponType type);
+    void SetDifficulty(DifficultyLevel level);
+    DifficultyLevel GetDifficulty() const;
+    float GetCashRewardMultiplier() const;
+    float GetEnemyDamageMultiplier() const;
+    float GetEnemyHealthMultiplier() const;
+    float GetToughnessMultiplier() const;
     bool HasShield() const;
     int GetShootCooldown() const;
     int GetMaxShootCooldown() const;
@@ -109,11 +116,13 @@ private:
     Player player;
     std::vector<Bullet> player_bullets;
     std::vector<Enemy> enemies;
-    
+
     int score = 0;
     int frame_count = 0;
     int wave = 1;
     bool game_over = false;
+    float cash_multiplier_cache = 1.0f;  // Cash multiplier based on wave progression
+    DifficultyLevel difficulty = DifficultyLevel::Medium;  // Default difficulty
     
     // Game constants
     static constexpr int PLAYER_MOVE_SPEED = 1;  // Smaller steps for smoother feel
