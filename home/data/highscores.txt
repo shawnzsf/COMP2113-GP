@@ -1,10 +1,10 @@
 Player 3640 10
 Player 2500 7
+Player 2020 8
 Player 1640 7
 Player 1400 7
 Player 1300 3
 Player 1230 4
 Player 960 6
 Player 930 4
-Player 900 6
 Player 900 6
