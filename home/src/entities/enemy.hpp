@@ -2,30 +2,7 @@
 #include "ftxui/dom/canvas.hpp"
 #include <vector>
 #include <string>
-
-struct Position {
-    int x;
-    int y;
-};
-
-enum class BulletType {
-    NORMAL,
-    EXPLOSIVE,
-    PIERCING
-};
-
-struct Bullet {
-    Position pos;
-    bool active = true;
-    int dx = 0;
-    int dy = -1;
-    int length = 1;
-    int lifetime = 0;
-    int explode_timer = 0;
-    BulletType type = BulletType::NORMAL;
-    int damage = 1;
-    int penetration = 0;  // For piercing bullets - remaining enemies to penetrate
-};
+#include "bullet.hpp"
 
 enum class EnemyType {
     REGULAR,  // Basic enemy - 1 hit to kill, standard movement

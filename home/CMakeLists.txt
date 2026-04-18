@@ -20,10 +20,8 @@ add_executable(Shooter_game
     src/ui/hud.cpp
     src/ui/menu.cpp
     src/ui/shop.cpp
+    src/ui/shop_renderer.cpp
     src/weapons/weapon.cpp
-    src/weapons/normal_weapon.cpp
-    src/weapons/double_weapon.cpp
-    src/weapons/spread_weapon.cpp
 )
 
 target_link_libraries(Shooter_game PRIVATE

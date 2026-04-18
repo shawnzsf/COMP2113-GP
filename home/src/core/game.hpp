@@ -3,15 +3,10 @@
 #include "ftxui/component/event.hpp"
 #include "../entities/enemy.hpp"
 #include "../entities/player.hpp"
+#include "../weapons/weapon.hpp"
 #include <vector>
 #include <string>
-
-enum class WeaponType {
-    BASIC,
-    DUAL,
-    TRI,
-    EXPLOSIVE
-};
+#include <memory>
 
 // Random event system
 enum class EventType {
@@ -156,6 +151,7 @@ private:
 
     // Player upgrades and currency
     int cash = 0;
+    std::unique_ptr<Weapon> current_weapon;
     WeaponType weapon_type = WeaponType::BASIC;
     bool has_dual_weapon = false;
     bool has_tri_weapon = false;

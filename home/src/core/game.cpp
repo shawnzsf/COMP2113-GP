@@ -9,7 +9,11 @@
 Game::Game() {
     srand(time(nullptr));  // Initialize random seed
     player.SetBounds(WIDTH, HEIGHT);
-    player.SetPosition(WIDTH / 2, HEIGHT - 3);
+    player.SetPosition(WIDTH / 2, HEIGHT / 2);
+
+    // Initialize weapon
+    current_weapon = CreateWeapon(WeaponType::BASIC);
+    weapon_type = WeaponType::BASIC;
 
     // Initialize empty event
     current_event = {"", "", EventType::PLAYER_BUFF, 0};
@@ -327,6 +331,8 @@ void Game::MoveBullets() {
 }
 
 void Game::FireWeapon() {
+    if (!current_weapon) return;
+
     Position player_pos = player.GetPosition();
     BulletType bullet_type = current_bullet_type;
 
@@ -335,122 +341,43 @@ void Game::FireWeapon() {
     if (damage_boost_timer > 0) {
         damage_multiplier *= 2;
     }
-    // Power Surge event
     if (current_event.name == "Power Surge!") {
         damage_multiplier *= 2;
     }
-    // Jammmed event
     if (current_event.name == "Jammed!") {
         damage_multiplier = std::max(1, damage_multiplier - 1);
     }
 
-    // Rapid fire from items or events (handled in Update())
-    // Jammmed event disables rapid fire
+    // Calculate damage based on bullet type
+    int bullet_damage = damage_multiplier * (
+        (bullet_type == BulletType::NORMAL) ? basic_bullet_damage :
+        (bullet_type == BulletType::EXPLOSIVE) ? explosive_bullet_damage :
+        piercing_bullet_damage);
 
-    int base_bullet_speed = 1 + bullet_speed_upgrades;
-    int piercing_speed = piercing_bullet_speed + bullet_speed_upgrades;
+    // Adjust bullet speed upgrades
+    int base_speed = 1 + bullet_speed_upgrades;
+    if (bullet_type == BulletType::PIERCING) {
+        base_speed = piercing_bullet_speed + bullet_speed_upgrades;
+    }
 
-    if (weapon_type == WeaponType::BASIC) {
-        Bullet b;
-        b.active = true;
-        b.pos = {player_pos.x + 1, player_pos.y - 1};
-        b.dx = 0;
-        b.dy = -base_bullet_speed;
-        b.type = bullet_type;
-        b.damage = damage_multiplier * ((bullet_type == BulletType::NORMAL) ? basic_bullet_damage :
-                   (bullet_type == BulletType::EXPLOSIVE) ? explosive_bullet_damage :
-                   piercing_bullet_damage);
+    // Check if weapon can use this bullet type
+    if (!current_weapon->CanUseBulletType(bullet_type)) {
+        bullet_type = BulletType::NORMAL;
+        bullet_damage = damage_multiplier * basic_bullet_damage;
+    }
 
+    // Fire weapon and get bullets
+    auto bullets = current_weapon->Fire(player_pos, bullet_type, bullet_damage);
+
+    // Apply speed adjustments
+    for (auto& b : bullets) {
         if (bullet_type == BulletType::PIERCING) {
+            b.dy = -(base_speed / 2);
             b.penetration = piercing_bullet_penetration;
-            b.dx = 0;
-            b.dy = -piercing_speed / 2;  // Faster movement
+        } else {
+            b.dy = -base_speed;
         }
-
         player_bullets.push_back(b);
-        return;
-    }
-
-    if (weapon_type == WeaponType::DUAL) {
-        int bullet_damage = (bullet_type == BulletType::NORMAL) ? basic_bullet_damage :
-                            (bullet_type == BulletType::EXPLOSIVE) ? explosive_bullet_damage :
-                            piercing_bullet_damage;
-
-        Bullet left;
-        left.active = true;
-        left.pos = {player_pos.x, player_pos.y - 1};
-        left.dx = -1;
-        left.dy = -base_bullet_speed;
-        left.type = bullet_type;
-        left.damage = bullet_damage;
-
-        Bullet right;
-        right.active = true;
-        right.pos = {player_pos.x + 2, player_pos.y - 1};
-        right.dx = 1;
-        right.dy = -base_bullet_speed;
-        right.type = bullet_type;
-        right.damage = bullet_damage;
-
-        if (bullet_type == BulletType::PIERCING) {
-            left.penetration = piercing_bullet_penetration;
-            right.penetration = piercing_bullet_penetration;
-            left.dy = right.dy = -piercing_speed / 2;
-        }
-
-        player_bullets.push_back(left);
-        player_bullets.push_back(right);
-        return;
-    }
-
-    if (weapon_type == WeaponType::TRI) {
-        Bullet center;
-        center.active = true;
-        center.pos = {player_pos.x + 1, player_pos.y - 1};
-        center.dx = 0;
-        center.dy = -base_bullet_speed;
-        center.type = bullet_type;
-        center.damage = (bullet_type == BulletType::NORMAL) ? basic_bullet_damage :
-                        (bullet_type == BulletType::EXPLOSIVE) ? explosive_bullet_damage :
-                        piercing_bullet_damage;
-
-        Bullet left;
-        left.active = true;
-        left.pos = {player_pos.x, player_pos.y - 1};
-        left.dx = -1;
-        left.dy = -base_bullet_speed;
-        left.type = bullet_type;
-        left.damage = center.damage;
-
-        Bullet right;
-        right.active = true;
-        right.pos = {player_pos.x + 2, player_pos.y - 1};
-        right.dx = 1;
-        right.dy = -base_bullet_speed;
-        right.type = bullet_type;
-        right.damage = center.damage;
-
-        if (bullet_type == BulletType::PIERCING) {
-            center.penetration = left.penetration = right.penetration = piercing_bullet_penetration;
-            center.dy = left.dy = right.dy = -piercing_speed / 2;
-        }
-
-        player_bullets.push_back(center);
-        player_bullets.push_back(left);
-        player_bullets.push_back(right);
-        return;
-    }
-
-    if (weapon_type == WeaponType::EXPLOSIVE) {
-        Bullet orb;
-        orb.active = true;
-        orb.pos = {player_pos.x + 1, player_pos.y - 1};
-        orb.dx = 0;
-        orb.dy = -base_bullet_speed;
-        orb.type = BulletType::EXPLOSIVE;
-        orb.damage = explosive_bullet_damage;
-        player_bullets.push_back(orb);
-        return;
     }
 }
 
@@ -667,16 +594,7 @@ void Game::Draw(ftxui::Canvas& canvas) {
 
     // Draw Player Bullets
     for (const auto& b : player_bullets) {
-        if (b.active) {
-            std::string symbol;
-            if (b.type == BulletType::EXPLOSIVE) symbol = "@";
-            else if (b.type == BulletType::PIERCING) symbol = "╹";
-            else symbol = "•";
-            auto color = (b.type == BulletType::EXPLOSIVE) ? ftxui::Color::Yellow :
-                         (b.type == BulletType::PIERCING) ? ftxui::Color::Cyan :
-                         ftxui::Color::Yellow;
-            canvas.DrawText(b.pos.x, b.pos.y, symbol, color);
-        }
+        b.Draw(canvas);
     }
 
     // // Draw HUD (Score, Cash, and Wave)
@@ -748,6 +666,7 @@ WeaponType Game::GetWeaponType() const {
 
 void Game::SetWeaponType(WeaponType type) {
     weapon_type = type;
+    current_weapon = CreateWeapon(type);
     // If current bullet type is not allowed with new weapon, switch to normal
     if (!CanUseBulletType(current_bullet_type)) {
         current_bullet_type = BulletType::NORMAL;
