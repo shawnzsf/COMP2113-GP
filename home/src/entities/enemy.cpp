@@ -18,8 +18,8 @@ Enemy::Enemy(EnemyType t, Position p) : pos(p), type(t) {
             health = 3;
             break;
         case EnemyType::BOSS:
-            max_health = 10;
-            health = 10;
+            max_health = 15;
+            health = 15;
             shoot_cooldown = 0;
             break;
         case EnemyType::CIRCLE_SHOOTER:
@@ -28,9 +28,14 @@ Enemy::Enemy(EnemyType t, Position p) : pos(p), type(t) {
             shoot_cooldown = 0;
             break;
         case EnemyType::MEGABOSS:
-            max_health = 30;
-            health = 30;
+            max_health = 60;
+            health = 60;
             shoot_cooldown = 0;
+            break;
+        case EnemyType::DROPSHIP:
+            max_health = 120;
+            health = 120;
+            shoot_timer = 100 + rand() % 200;  // Initial random delay
             break;
     }
 }
@@ -54,9 +59,12 @@ void Enemy::Update(Position player_pos) {
         case EnemyType::MEGABOSS:
             UpdateMegaboss(player_pos);
             break;
+        case EnemyType::DROPSHIP:
+            UpdateDropship();
+            break;
     }
 
-    if (type == EnemyType::BOSS || type == EnemyType::CIRCLE_SHOOTER || type == EnemyType::MEGABOSS) {
+    if (type == EnemyType::BOSS || type == EnemyType::CIRCLE_SHOOTER || type == EnemyType::MEGABOSS || type == EnemyType::DROPSHIP) {
         for (auto& bullet : bullets) {
             if (!bullet.active) continue;
             bullet.pos.x += bullet.dx;
@@ -226,6 +234,76 @@ void Enemy::UpdateMegaboss(Position player_pos) {
     }
 }
 
+void Enemy::UpdateDropship() {
+    move_timer++;
+
+    // Dropship moves like boss but faster
+    if (move_timer % 8 == 0) {  // Change direction more frequently
+        int rand_val = (random_seed + move_timer) % 100;
+
+        // Dropship can move in 8 directions
+        if (rand_val < 12) {
+            move_direction_x = -1; move_direction_y = -1;  // Up-left
+        } else if (rand_val < 25) {
+            move_direction_x = 0; move_direction_y = -1;   // Up
+        } else if (rand_val < 37) {
+            move_direction_x = 1; move_direction_y = -1;   // Up-right
+        } else if (rand_val < 50) {
+            move_direction_x = -1; move_direction_y = 0;   // Left
+        } else if (rand_val < 62) {
+            move_direction_x = 1; move_direction_y = 0;    // Right
+        } else if (rand_val < 75) {
+            move_direction_x = -1; move_direction_y = 1;   // Down-left
+        } else if (rand_val < 87) {
+            move_direction_x = 0; move_direction_y = 1;    // Down
+        } else {
+            move_direction_x = 1; move_direction_y = 1;    // Down-right
+        }
+
+        // Dropship moves faster
+        int speed = 3;  // Faster movement
+        pos.x += move_direction_x * speed;
+        pos.y += move_direction_y * speed;
+
+        // Keep within bounds (dropship stays in upper area)
+        pos.x = std::max(15, std::min(155, pos.x));
+        pos.y = std::max(15, std::min(70, pos.y));
+    }
+
+    // Stream shooting logic - increased fire rate
+    if (shoot_timer > 0) {
+        shoot_timer--;
+    } else if (shooting_active) {
+        // During active shooting, shoot every 4 frames (increased fire rate)
+        if (move_timer % 4 == 0) {
+            ShootStream();
+        }
+        shooting_timer--;
+        if (shooting_timer <= 0) {
+            shooting_active = false;
+            shoot_timer = 100 + (random_seed + move_timer) % 150;  // Shorter random interval 100-249 frames
+        }
+    } else {
+        // Start shooting
+        shooting_active = true;
+        shooting_timer = 120;  // Shoot for 120 frames (longer stream)
+    }
+
+    // Spawning logic - increased spawn rate, spawn every 400 frames
+    if (move_timer % 400 == 0) {
+        int rand_val = (random_seed + move_timer) % 100;
+        if (rand_val < 50) {
+            // Spawn megaboss
+            Enemy megaboss = CreateMegabossEnemy({pos.x + 5, pos.y + 5});
+            spawned_enemies.push_back(megaboss);
+        } else {
+            // Spawn boss
+            Enemy boss = CreateBossEnemy({pos.x - 5, pos.y + 5});
+            spawned_enemies.push_back(boss);
+        }
+    }
+}
+
 void Enemy::ShootBullet() {
     Bullet bullet;
     bullet.pos = {pos.x, pos.y + 2};  // Shoot from below the boss
@@ -290,6 +368,23 @@ void Enemy::ShootMegabossSpread() {
     }
 }
 
+void Enemy::ShootStream() {
+    // Shoot two streams from opposite sides of the dropship - faster bullets
+    Bullet left;
+    left.pos = {pos.x - 4, pos.y + 3};  // From far left side
+    left.dx = 0;
+    left.dy = 2;  // Faster bullets
+    left.active = true;
+    bullets.push_back(left);
+
+    Bullet right;
+    right.pos = {pos.x + 4, pos.y + 3};  // From far right side
+    right.dx = 0;
+    right.dy = 2;  // Faster bullets
+    right.active = true;
+    bullets.push_back(right);
+}
+
 void Enemy::TakeDamage(int damage) {
     health -= damage;
     if (health <= 0) {
@@ -304,25 +399,20 @@ std::string Enemy::GetSymbol() const {
         case EnemyType::ELITE:
             return "▲";
         case EnemyType::BOSS: {
+            std::string symbol = "▣";
             int lost = max_health - health;
-            std::string symbol = "■";
-            int stage = std::min(4, lost / 2);
-            switch (stage) {
-                case 0: symbol = "■"; break;
-                case 1: symbol = "🞓"; break;
-                case 2: symbol = "🞒"; break;
-                case 3: symbol = "🞑"; break;
-                default: symbol = "🞏"; break;
-            }
+            int symbols = 3 - (lost / (max_health / 3));
+            if (symbols < 0) symbols = 0;
             std::string result;
-            for (int i = 0; i < 2; ++i) {
+            for (int i = 0; i < symbols; ++i) {
                 result += symbol;
             }
             return result;
+
         }
         case EnemyType::CIRCLE_SHOOTER:
-            if (health > max_health / 2) return "◉";
-            else return "🞅";
+            if (health > max_health / 2) return "◉◉";
+            else return "◉";
         case EnemyType::MEGABOSS: {
             int lost = max_health - health;
             int symbols = 6 - (lost / (max_health / 6));
@@ -331,6 +421,28 @@ std::string Enemy::GetSymbol() const {
             for (int i = 0; i < symbols; ++i) {
                 result += "🞚";
             }
+            return result;
+        }
+        case EnemyType::DROPSHIP: {
+            int lost = max_health - health;
+            int state = lost / 20;  // 0 to 5
+            int rows = 5 - state;  // Show up to 5 rows
+            if (rows < 1) rows = 1;
+            
+            // Build the multi-line symbol directly
+            std::string result;
+            std::string line1 = "🞕🞖🞖🞖🞖🞕";
+            std::string line2 = "🞕🞖🞖🞖🞖🞕";
+            std::string line3 = "🞕🞖🞖🞖🞖🞕";
+            std::string line4 = "🞕🞖🞖🞖🞖🞕";
+            std::string line5 = "🞕🞖🞖🞖🞖🞕";
+            
+            if (rows >= 1) result += line1;
+            if (rows >= 2) result += "\n" + line2;
+            if (rows >= 3) result += "\n" + line3;
+            if (rows >= 4) result += "\n" + line4;
+            if (rows >= 5) result += "\n" + line5;
+            
             return result;
         }
         default:
@@ -350,6 +462,8 @@ ftxui::Color Enemy::GetColor() const {
             return ftxui::Color::Blue;
         case EnemyType::MEGABOSS:
             return ftxui::Color::Red;  // Distinctive color for megaboss
+        case EnemyType::DROPSHIP:
+            return ftxui::Color::Cyan;  // Distinctive color for dropship
         default:
             return ftxui::Color::Red;
     }
@@ -358,14 +472,33 @@ ftxui::Color Enemy::GetColor() const {
 void Enemy::Draw(ftxui::Canvas& canvas) const {
     if (!IsAlive()) return;
 
-    canvas.DrawText(pos.x, pos.y, GetSymbol(), GetColor());
+    std::string symbol = GetSymbol();
+    if (type == EnemyType::DROPSHIP) {
+        // Handle multi-line symbol
+        size_t pos_start = 0;
+        size_t pos_end = symbol.find('\n');
+        int line = 0;
+        while (pos_end != std::string::npos) {
+            std::string line_symbol = symbol.substr(pos_start, pos_end - pos_start);
+            canvas.DrawText(this->pos.x, this->pos.y + line, line_symbol, GetColor());
+            pos_start = pos_end + 1;
+            pos_end = symbol.find('\n', pos_start);
+            line++;
+        }
+        // Last line
+        std::string line_symbol = symbol.substr(pos_start);
+        canvas.DrawText(this->pos.x, this->pos.y + line, line_symbol, GetColor());
+    } else {
+        canvas.DrawText(pos.x, pos.y, symbol, GetColor());
+    }
 
-    if (type == EnemyType::BOSS || type == EnemyType::CIRCLE_SHOOTER || type == EnemyType::MEGABOSS) {
+    if (type == EnemyType::BOSS || type == EnemyType::CIRCLE_SHOOTER || type == EnemyType::MEGABOSS || type == EnemyType::DROPSHIP) {
         for (const auto& bullet : bullets) {
             if (!bullet.active) continue;
-            canvas.DrawText(bullet.pos.x, bullet.pos.y, "*", ftxui::Color::Red);
+            std::string bullet_symbol = (type == EnemyType::DROPSHIP) ? "┃" : "*";
+            canvas.DrawText(bullet.pos.x, bullet.pos.y, bullet_symbol, ftxui::Color::Red);
             if (bullet.length > 1) {
-                canvas.DrawText(bullet.pos.x + bullet.dx, bullet.pos.y + bullet.dy, "*", ftxui::Color::Red);
+                canvas.DrawText(bullet.pos.x + bullet.dx, bullet.pos.y + bullet.dy, bullet_symbol, ftxui::Color::Red);
             }
         }
     }
@@ -390,4 +523,8 @@ Enemy CreateCircleShooterEnemy(Position pos) {
 
 Enemy CreateMegabossEnemy(Position pos) {
     return Enemy(EnemyType::MEGABOSS, pos);
+}
+
+Enemy CreateDropshipEnemy(Position pos) {
+    return Enemy(EnemyType::DROPSHIP, pos);
 }

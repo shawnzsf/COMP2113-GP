@@ -26,6 +26,7 @@ enum class GameState {
     MainMenu,
     Playing,
     Scoreboard,
+    Controls,
     GameOver
 };
 
@@ -56,7 +57,7 @@ int main() {
 
     // Main menu renderer
     auto main_menu_renderer = Renderer([&] {
-        std::vector<std::string> menu_items = {"Start Game", "Scoreboard"};
+        std::vector<std::string> menu_items = {"Start Game", "Scoreboard", "Controls"};
 
         Elements menu_elements;
         menu_elements.push_back(text("  ███████╗██████╗  █████╗  ██████╗███████╗    ███████╗██╗  ██╗ ██████╗  ██████╗ ████████╗███████╗██████╗ ") | bold | color(Color::Red) | center);
@@ -113,6 +114,49 @@ int main() {
         scoreboard_elements.push_back(text("Press ESC to return to menu") | color(Color::GrayLight) | center);
 
         return vbox(std::move(scoreboard_elements)) | center | border | color(Color::White);
+    });
+
+    // Controls renderer
+    auto controls_renderer = Renderer([&] {
+        Elements controls_elements;
+        controls_elements.push_back(text("CONTROLS & GAMEPLAY") | bold | color(Color::Yellow) | center);
+        controls_elements.push_back(separator());
+        controls_elements.push_back(text(""));
+
+        controls_elements.push_back(text("Gameplay Overview:") | bold | color(Color::Cyan));
+        controls_elements.push_back(text("- Survive waves of enemies while upgrading weapons and bullets." ) | color(Color::GrayLight));
+        controls_elements.push_back(text("- Press P during play to open the Shop and upgrade/buy items.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Press Q during play to quit back to the main menu.") | color(Color::GrayLight));
+        controls_elements.push_back(text(""));
+
+        controls_elements.push_back(text("Movement & Shooting:") | bold | color(Color::Cyan));
+        controls_elements.push_back(text("- Use the keyboard to move the player ship and aim.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Press SPACE to shoot.") | color(Color::GrayLight));
+        controls_elements.push_back(text(""));
+
+        controls_elements.push_back(text("Weapons & Bullets:") | bold | color(Color::Cyan));
+        controls_elements.push_back(text("- Z/X/C: Switch between weapon types.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- 1/2/3: Switch bullet types (Basic, Explosive, Piercing).") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Explosive bullets cannot be used with Dual or Tri Shot weapons.") | color(Color::GrayLight));
+        controls_elements.push_back(text(""));
+        controls_elements.push_back(text("Weapon Types:") | bold | color(Color::Cyan));
+        controls_elements.push_back(text("- Basic Pistol: single-shot damage.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Dual Shot: fires two bullets at once.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Tri Shot: fires three bullets in a spread.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Explosive: area damage on impact.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- Piercing: bullets pass through enemies.") | color(Color::GrayLight));
+        controls_elements.push_back(text(""));
+
+        controls_elements.push_back(text("Shop Controls:") | bold | color(Color::Cyan));
+        controls_elements.push_back(text("- ← / → : Switch shop categories.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- ↑ / ↓ : Select item.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- ENTER : Buy or upgrade selected item.") | color(Color::GrayLight));
+        controls_elements.push_back(text("- P or ESC : Resume the game.") | color(Color::GrayLight));
+        controls_elements.push_back(text(""));
+
+        controls_elements.push_back(text("Press ESC to return to the main menu.") | color(Color::GrayLight));
+
+        return vbox(std::move(controls_elements)) | center | border | color(Color::White);
     });
 
     // Game Over renderer
@@ -231,9 +275,30 @@ int main() {
                         status_text = " [OWNED - ENTER to upgrade]";
                         item_color = Color::Cyan;
                         is_selectable = shop.CanAfford(item, game.GetCash());
+                    } else if (item.category == ItemCategory::BULLET && item.can_stack) {
+                        // Bullet upgrades - check prerequisites
+                        bool has_prerequisites = true;
+                        if (item.name == "Explosive Damage +1" || item.name == "Explosive Radius +1") {
+                            has_prerequisites = game.HasExplosive();
+                        } else if (item.name == "Piercing Damage +1" || item.name == "Piercing Penetra. +1") {
+                            has_prerequisites = game.HasPiercing();
+                        }
+                        if (has_prerequisites && shop.CanAfford(item, game.GetCash())) {
+                            status_text = " [$" + std::to_string(item.cost) + "]";
+                            item_color = Color::Cyan;
+                            is_selectable = true;
+                        } else if (!has_prerequisites) {
+                            status_text = " [REQUIRES UNLOCK]";
+                            item_color = Color::Red;
+                            is_selectable = false;
+                        } else {
+                            status_text = " [$" + std::to_string(item.cost) + " - UNAVAILABLE]";
+                            item_color = Color::Red;
+                            is_selectable = false;
+                        }
                     } else if (shop.CanAfford(item, game.GetCash())) {
                         status_text = " [$" + std::to_string(item.cost) + "]";
-                        item_color = Color::Yellow;
+                        item_color = item.can_stack ? Color::Cyan : Color::Yellow;
                     } else {
                         status_text = " [$" + std::to_string(item.cost) + " - UNAVAILABLE]";
                         item_color = Color::Red;
@@ -286,6 +351,8 @@ int main() {
                 return main_menu_renderer->Render();
             case GameState::Scoreboard:
                 return scoreboard_renderer->Render();
+            case GameState::Controls:
+                return controls_renderer->Render();
             case GameState::Playing:
                 return game_renderer->Render();
             case GameState::GameOver:
@@ -300,11 +367,11 @@ int main() {
         switch (current_state) {
             case GameState::MainMenu: {
                 if (event == Event::ArrowUp) {
-                    selected_menu_item = (selected_menu_item - 1 + 2) % 2;
+                    selected_menu_item = (selected_menu_item - 1 + 3) % 3;
                     return true;
                 }
                 if (event == Event::ArrowDown) {
-                    selected_menu_item = (selected_menu_item + 1) % 2;
+                    selected_menu_item = (selected_menu_item + 1) % 3;
                     return true;
                 }
                 if (event == Event::Return) {
@@ -315,6 +382,8 @@ int main() {
                         game = Game(); // Reset game
                     } else if (selected_menu_item == 1) { // Scoreboard
                         current_state = GameState::Scoreboard;
+                    } else if (selected_menu_item == 2) { // Controls
+                        current_state = GameState::Controls;
                     }
                     return true;
                 }
@@ -329,6 +398,14 @@ int main() {
                 if (event == Event::Escape) {
                     current_state = GameState::MainMenu;
                     paused = false;
+                    return true;
+                }
+                break;
+            }
+
+            case GameState::Controls: {
+                if (event == Event::Escape || event == Event::Character('q') || event == Event::Character('Q')) {
+                    current_state = GameState::MainMenu;
                     return true;
                 }
                 break;
@@ -373,6 +450,9 @@ int main() {
                             if (current_upgrade_item == "Basic Damage +1") {
                                 cost = 50;
                                 game.UpgradeBasicBulletDamage(cost);
+                            } else if (current_upgrade_item == "Basic Speed +1") {
+                                cost = 120;
+                                game.UpgradeBasicBulletSpeed(cost);
                             } else if (current_upgrade_item == "Explosive Damage +1") {
                                 cost = 60;
                                 game.UpgradeExplosiveDamage(cost);
@@ -457,29 +537,50 @@ int main() {
                                         game.ActivateFreeze();
                                     }
                                     return true;
-                                } else if (item.category == ItemCategory::BULLET && item.can_stack) {
-                                    // Show upgrade options for owned bullet upgrades
-                                    current_upgrade_item = item.name;
-                                    upgrade_options.clear();
-                                    if (item.name == "Basic Damage +1") {
-                                        upgrade_options.push_back("+1 Damage (Cost: $50)");
-                                    } else if (item.name == "Explosive Damage +1") {
-                                        upgrade_options.push_back("+1 Damage (Cost: $60)");
-                                    } else if (item.name == "Explosive Radius +1") {
-                                        upgrade_options.push_back("+1 Radius (Cost: $60)");
-                                    } else if (item.name == "Piercing Damage +1") {
-                                        upgrade_options.push_back("+1 Damage (Cost: $50)");
-                                    } else if (item.name == "Piercing Penetra. +1") {
-                                        upgrade_options.push_back("+1 Penetration (Cost: $60)");
+                                } else if (item.category == ItemCategory::WEAPON) {
+                                    // Switch to owned weapon
+                                    if (item.name == "Dual Shot") {
+                                        game.SetWeaponType(WeaponType::DUAL);
+                                    } else if (item.name == "Tri Shot") {
+                                        game.SetWeaponType(WeaponType::TRI);
                                     }
-                                    if (!upgrade_options.empty()) {
-                                        upgrade_options.push_back("CONFIRM UPGRADE");
-                                        in_upgrade_submenu = true;
-                                        upgrade_submenu_selected = 0;
+                                    // If current bullet type is not allowed, switch to normal
+                                    if (!game.CanUseBulletType(game.GetBulletType())) {
+                                        game.SetBulletType(BulletType::NORMAL);
                                     }
                                     return true;
                                 }
                                 return true;  // Other owned items - nothing to do
+                            }
+
+                            // Handle bullet upgrades (can be purchased multiple times)
+                            if (item.category == ItemCategory::BULLET && item.can_stack) {
+                                // Show upgrade options for bullet upgrades
+                                current_upgrade_item = item.name;
+                                upgrade_options.clear();
+                                if (item.name == "Basic Damage +1") {
+                                    upgrade_options.push_back("+1 Damage (Cost: $50)");
+                                } else if (item.name == "Basic Speed +1") {
+                                    upgrade_options.push_back("+1 Speed (Cost: $120)");
+                                } else if (item.name == "Explosive Damage +1") {
+                                    if (!game.HasExplosive()) return true;  // Can't upgrade if not unlocked
+                                    upgrade_options.push_back("+1 Damage (Cost: $60)");
+                                } else if (item.name == "Explosive Radius +1") {
+                                    if (!game.HasExplosive()) return true;  // Can't upgrade if not unlocked
+                                    upgrade_options.push_back("+1 Radius (Cost: $60)");
+                                } else if (item.name == "Piercing Damage +1") {
+                                    if (!game.HasPiercing()) return true;  // Can't upgrade if not unlocked
+                                    upgrade_options.push_back("+1 Damage (Cost: $50)");
+                                } else if (item.name == "Piercing Penetra. +1") {
+                                    if (!game.HasPiercing()) return true;  // Can't upgrade if not unlocked
+                                    upgrade_options.push_back("+1 Penetration (Cost: $60)");
+                                }
+                                if (!upgrade_options.empty()) {
+                                    upgrade_options.push_back("CONFIRM UPGRADE");
+                                    in_upgrade_submenu = true;
+                                    upgrade_submenu_selected = 0;
+                                }
+                                return true;
                             }
 
                             // Not owned - try to buy

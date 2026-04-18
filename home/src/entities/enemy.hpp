@@ -32,7 +32,8 @@ enum class EnemyType {
     ELITE,    // Elite enemy - 3 hits to kill, random movement
     BOSS,     // Boss enemy - 10 hits to kill, fast random movement, can shoot
     CIRCLE_SHOOTER,  // Shoots an expanding circle of bullets every 240 frames
-    MEGABOSS  // Mega boss - 20 hits to kill, shoots bullets at player
+    MEGABOSS,  // Mega boss - 20 hits to kill, shoots bullets at player
+    DROPSHIP   // Dropship boss - 120 hits to kill, spawns megabosses and bosses, shoots circles
 };
 
 struct Enemy {
@@ -52,6 +53,14 @@ struct Enemy {
     int shoot_cooldown = 0;
     std::vector<Bullet> bullets;
 
+    // For spawning enemies (dropship)
+    std::vector<Enemy> spawned_enemies;
+
+    // For dropship stream shooting
+    int shoot_timer = 0;
+    bool shooting_active = false;
+    int shooting_timer = 0;
+
     Enemy() = default;
     Enemy(EnemyType t, Position p);
 
@@ -69,10 +78,12 @@ private:
     void UpdateBoss();
     void UpdateCircleShooter();
     void UpdateMegaboss(Position player_pos);
+    void UpdateDropship();
     void ShootBullet();
     void ShootCircle();
     void ShootAtPlayer(Position player_pos);
     void ShootMegabossSpread();
+    void ShootStream();
 };
 
 // Enemy factory functions
@@ -81,3 +92,4 @@ Enemy CreateEliteEnemy(Position pos);
 Enemy CreateBossEnemy(Position pos);
 Enemy CreateCircleShooterEnemy(Position pos);
 Enemy CreateMegabossEnemy(Position pos);
+Enemy CreateDropshipEnemy(Position pos);

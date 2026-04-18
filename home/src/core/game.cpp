@@ -55,6 +55,12 @@ void Game::SpawnEnemies() {
         available_enemies.push_back({EnemyType::MEGABOSS, MEGABOSS_COST});
     }
 
+    // Dropship from wave 12
+    const int DROPSHIP_COST = 15;
+    if (wave >= 12) {
+        available_enemies.push_back({EnemyType::DROPSHIP, DROPSHIP_COST});
+    }
+
     // Calculate difficulty multiplier (every 5 waves increases difficulty)
     int difficulty_multiplier = 1 + (wave / 5);
 
@@ -161,12 +167,40 @@ bool Game::HandleEvent(const ftxui::Event& event) {
         current_bullet_type = BulletType::NORMAL;
         handled = true;
     }
-    if (event == ftxui::Event::Character('2') && owned_explosive) {
+    if (event == ftxui::Event::Character('2') && CanUseBulletType(BulletType::EXPLOSIVE)) {
         current_bullet_type = BulletType::EXPLOSIVE;
         handled = true;
     }
-    if (event == ftxui::Event::Character('3') && owned_piercing) {
+    if (event == ftxui::Event::Character('3') && CanUseBulletType(BulletType::PIERCING)) {
         current_bullet_type = BulletType::PIERCING;
+        handled = true;
+    }
+
+    // Handle weapon switching
+    if (event == ftxui::Event::Character('z') || event == ftxui::Event::Character('Z')) {
+        weapon_type = WeaponType::BASIC;
+        // If current bullet type is not allowed, switch to normal
+        if (!CanUseBulletType(current_bullet_type)) {
+            current_bullet_type = BulletType::NORMAL;
+        }
+        handled = true;
+    }
+    if (event == ftxui::Event::Character('x') || event == ftxui::Event::Character('X')) {
+        if (has_dual_weapon) {
+            weapon_type = WeaponType::DUAL;
+            if (!CanUseBulletType(current_bullet_type)) {
+                current_bullet_type = BulletType::NORMAL;
+            }
+        }
+        handled = true;
+    }
+    if (event == ftxui::Event::Character('c') || event == ftxui::Event::Character('C')) {
+        if (has_tri_weapon) {
+            weapon_type = WeaponType::TRI;
+            if (!CanUseBulletType(current_bullet_type)) {
+                current_bullet_type = BulletType::NORMAL;
+            }
+        }
         handled = true;
     }
 
@@ -226,12 +260,6 @@ void Game::Update() {
         move_up_timer = std::min(move_up_timer, 4);
         move_down_timer = std::min(move_down_timer, 4);
     }
-    if (current_event.name == "Gravity Well!") {
-        move_left_timer = std::max(move_left_timer, 9);
-        move_right_timer = std::max(move_right_timer, 9);
-        move_up_timer = std::max(move_up_timer, 9);
-        move_down_timer = std::max(move_down_timer, 9);
-    }
 
     // Update game logic
     MoveBullets();
@@ -256,7 +284,7 @@ void Game::Update() {
     // Enemy descent (independent of movement)
     if (frame_count % ENEMY_DESCENT_INTERVAL == 0) {
         for (auto& e : enemies) {
-            if (e.alive) e.pos.y++;
+            if (e.alive && e.type != EnemyType::DROPSHIP) e.pos.y++;
         }
     }
 
@@ -319,12 +347,15 @@ void Game::FireWeapon() {
     // Rapid fire from items or events (handled in Update())
     // Jammmed event disables rapid fire
 
+    int base_bullet_speed = 1 + bullet_speed_upgrades;
+    int piercing_speed = piercing_bullet_speed + bullet_speed_upgrades;
+
     if (weapon_type == WeaponType::BASIC) {
         Bullet b;
         b.active = true;
         b.pos = {player_pos.x + 1, player_pos.y - 1};
         b.dx = 0;
-        b.dy = -1;
+        b.dy = -base_bullet_speed;
         b.type = bullet_type;
         b.damage = damage_multiplier * ((bullet_type == BulletType::NORMAL) ? basic_bullet_damage :
                    (bullet_type == BulletType::EXPLOSIVE) ? explosive_bullet_damage :
@@ -333,7 +364,7 @@ void Game::FireWeapon() {
         if (bullet_type == BulletType::PIERCING) {
             b.penetration = piercing_bullet_penetration;
             b.dx = 0;
-            b.dy = -piercing_bullet_speed / 2;  // Faster movement
+            b.dy = -piercing_speed / 2;  // Faster movement
         }
 
         player_bullets.push_back(b);
@@ -349,7 +380,7 @@ void Game::FireWeapon() {
         left.active = true;
         left.pos = {player_pos.x, player_pos.y - 1};
         left.dx = -1;
-        left.dy = -1;
+        left.dy = -base_bullet_speed;
         left.type = bullet_type;
         left.damage = bullet_damage;
 
@@ -357,14 +388,14 @@ void Game::FireWeapon() {
         right.active = true;
         right.pos = {player_pos.x + 2, player_pos.y - 1};
         right.dx = 1;
-        right.dy = -1;
+        right.dy = -base_bullet_speed;
         right.type = bullet_type;
         right.damage = bullet_damage;
 
         if (bullet_type == BulletType::PIERCING) {
             left.penetration = piercing_bullet_penetration;
             right.penetration = piercing_bullet_penetration;
-            left.dy = right.dy = -piercing_bullet_speed / 2;
+            left.dy = right.dy = -piercing_speed / 2;
         }
 
         player_bullets.push_back(left);
@@ -377,7 +408,7 @@ void Game::FireWeapon() {
         center.active = true;
         center.pos = {player_pos.x + 1, player_pos.y - 1};
         center.dx = 0;
-        center.dy = -1;
+        center.dy = -base_bullet_speed;
         center.type = bullet_type;
         center.damage = (bullet_type == BulletType::NORMAL) ? basic_bullet_damage :
                         (bullet_type == BulletType::EXPLOSIVE) ? explosive_bullet_damage :
@@ -387,7 +418,7 @@ void Game::FireWeapon() {
         left.active = true;
         left.pos = {player_pos.x, player_pos.y - 1};
         left.dx = -1;
-        left.dy = -1;
+        left.dy = -base_bullet_speed;
         left.type = bullet_type;
         left.damage = center.damage;
 
@@ -395,13 +426,13 @@ void Game::FireWeapon() {
         right.active = true;
         right.pos = {player_pos.x + 2, player_pos.y - 1};
         right.dx = 1;
-        right.dy = -1;
+        right.dy = -base_bullet_speed;
         right.type = bullet_type;
         right.damage = center.damage;
 
         if (bullet_type == BulletType::PIERCING) {
             center.penetration = left.penetration = right.penetration = piercing_bullet_penetration;
-            center.dy = left.dy = right.dy = -piercing_bullet_speed / 2;
+            center.dy = left.dy = right.dy = -piercing_speed / 2;
         }
 
         player_bullets.push_back(center);
@@ -415,7 +446,7 @@ void Game::FireWeapon() {
         orb.active = true;
         orb.pos = {player_pos.x + 1, player_pos.y - 1};
         orb.dx = 0;
-        orb.dy = -1;
+        orb.dy = -base_bullet_speed;
         orb.type = BulletType::EXPLOSIVE;
         orb.damage = explosive_bullet_damage;
         player_bullets.push_back(orb);
@@ -473,6 +504,12 @@ void Game::MoveEnemies() {
     for (auto& e : enemies) {
         e.Update(player_pos);
     }
+
+    // Add spawned enemies
+    for (auto& e : enemies) {
+        enemies.insert(enemies.end(), e.spawned_enemies.begin(), e.spawned_enemies.end());
+        e.spawned_enemies.clear();
+    }
 }
 
 void Game::CheckCollisions() {
@@ -486,6 +523,7 @@ void Game::CheckCollisions() {
             float collision_radius = 1.0f;
             if (e.type == EnemyType::BOSS) collision_radius = 2.0f;
             else if (e.type == EnemyType::MEGABOSS) collision_radius = 3.0f;
+            else if (e.type == EnemyType::DROPSHIP) collision_radius = 4.0f;
 
             if (b.type == BulletType::EXPLOSIVE) collision_radius *= 2.0f;
             else if (b.type == BulletType::NORMAL) collision_radius *= 1.5f;
@@ -526,11 +564,12 @@ void Game::CheckCollisions() {
                     // Award points if enemy destroyed
                     if (!e.IsAlive()) {
                         switch (e.type) {
-                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += 5 * difficulty; break;
-                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += 15 * difficulty; break;
-                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += 50 * difficulty; break;
-                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += 15 * difficulty; break;
-                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += 100 * difficulty; break;
+                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += 2 * difficulty; break;
+                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += 5 * difficulty; break;
+                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += 15 * difficulty; break;
+                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += 5 * difficulty; break;
+                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += 30 * difficulty; break;
+                            case EnemyType::DROPSHIP: score += POINTS_DROPSHIP_ENEMY * difficulty; cash += 50 * difficulty; break;
                         }
                     }
                 } else {
@@ -539,11 +578,12 @@ void Game::CheckCollisions() {
                     b.active = false;
                     if (!e.IsAlive()) {
                         switch (e.type) {
-                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += 5 * difficulty; break;
-                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += 15 * difficulty; break;
-                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += 50 * difficulty; break;
-                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += 15 * difficulty; break;
-                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += 100 * difficulty; break;
+                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += 2 * difficulty; break;
+                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += 5 * difficulty; break;
+                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += 15 * difficulty; break;
+                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += 5 * difficulty; break;
+                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += 30 * difficulty; break;
+                            case EnemyType::DROPSHIP: score += POINTS_DROPSHIP_ENEMY * difficulty; cash += 50 * difficulty; break;
                         }
                     }
                 }
@@ -630,9 +670,12 @@ void Game::Draw(ftxui::Canvas& canvas) {
         if (b.active) {
             std::string symbol;
             if (b.type == BulletType::EXPLOSIVE) symbol = "@";
-            else if (b.type == BulletType::PIERCING) symbol = "=";
+            else if (b.type == BulletType::PIERCING) symbol = "╹";
             else symbol = "•";
-            canvas.DrawText(b.pos.x, b.pos.y, symbol, ftxui::Color::Yellow);
+            auto color = (b.type == BulletType::EXPLOSIVE) ? ftxui::Color::Yellow :
+                         (b.type == BulletType::PIERCING) ? ftxui::Color::Cyan :
+                         ftxui::Color::Yellow;
+            canvas.DrawText(b.pos.x, b.pos.y, symbol, color);
         }
     }
 
@@ -677,6 +720,12 @@ bool Game::BuyWeapon(WeaponType type, int cost) {
     }
     cash -= cost;
     weapon_type = type;
+    if (type == WeaponType::DUAL) has_dual_weapon = true;
+    if (type == WeaponType::TRI) has_tri_weapon = true;
+    // If current bullet type is not allowed with new weapon, switch to normal
+    if (!CanUseBulletType(current_bullet_type)) {
+        current_bullet_type = BulletType::NORMAL;
+    }
     return true;
 }
 
@@ -695,6 +744,14 @@ int Game::GetCash() const {
 
 WeaponType Game::GetWeaponType() const {
     return weapon_type;
+}
+
+void Game::SetWeaponType(WeaponType type) {
+    weapon_type = type;
+    // If current bullet type is not allowed with new weapon, switch to normal
+    if (!CanUseBulletType(current_bullet_type)) {
+        current_bullet_type = BulletType::NORMAL;
+    }
 }
 
 bool Game::HasShield() const {
@@ -754,9 +811,20 @@ BulletType Game::GetBulletType() const {
     return current_bullet_type;
 }
 
+void Game::SetBulletType(BulletType type) {
+    if (CanUseBulletType(type)) {
+        current_bullet_type = type;
+    }
+}
+
 bool Game::CanUseBulletType(BulletType type) const {
     if (type == BulletType::NORMAL) return true;
-    if (type == BulletType::EXPLOSIVE) return owned_explosive;
+    if (type == BulletType::EXPLOSIVE) {
+        if (!owned_explosive) return false;
+        // Cannot use explosive with multi-shot weapons
+        if (weapon_type == WeaponType::DUAL || weapon_type == WeaponType::TRI) return false;
+        return true;
+    }
     if (type == BulletType::PIERCING) return owned_piercing;
     return false;
 }
@@ -784,35 +852,42 @@ bool Game::BuyPiercingBullet(int cost) {
 }
 
 bool Game::UpgradeBasicBulletDamage(int cost) {
-    if (!CanAfford(cost)) return false;
+    if (!CanAfford(cost) || basic_bullet_damage >= 6) return false;  // Limit to +5 damage (base 1 + 5 = 6)
     cash -= cost;
     basic_bullet_damage++;
     return true;
 }
 
+bool Game::UpgradeBasicBulletSpeed(int cost) {
+    if (!CanAfford(cost) || bullet_speed_upgrades >= 4) return false;  // Limit to +4 speed upgrades
+    cash -= cost;
+    bullet_speed_upgrades++;
+    return true;
+}
+
 bool Game::UpgradeExplosiveDamage(int cost) {
-    if (!CanAfford(cost)) return false;
+    if (!CanAfford(cost) || explosive_bullet_damage >= 4) return false;  // Limit to +3 damage (base 1 + 3 = 4)
     cash -= cost;
     explosive_bullet_damage++;
     return true;
 }
 
 bool Game::UpgradeExplosiveRadius(int cost) {
-    if (!CanAfford(cost)) return false;
+    if (!CanAfford(cost) || explosive_bullet_radius >= 4) return false;  // Limit to +3 radius (base 1 + 3 = 4)
     cash -= cost;
     explosive_bullet_radius++;
     return true;
 }
 
 bool Game::UpgradePiercingDamage(int cost) {
-    if (!CanAfford(cost)) return false;
+    if (!CanAfford(cost) || piercing_bullet_damage >= 7) return false;  // Limit to +4 damage (base 2 + 4 = 6)
     cash -= cost;
     piercing_bullet_damage++;
     return true;
 }
 
 bool Game::UpgradePiercingPenetration(int cost) {
-    if (!CanAfford(cost)) return false;
+    if (!CanAfford(cost) || piercing_bullet_penetration >= 5) return false;  // Limit to +2 penetration (base 2 + 2 = 4)
     cash -= cost;
     piercing_bullet_penetration++;
     return true;
@@ -904,7 +979,7 @@ void Game::ActivateFreeze() {
 
 // Random event system
 void Game::GenerateRandomEvent() {
-    // Library of 20 predefined events
+    // Library of 19 predefined events
     const std::vector<RandomEvent> event_library = {
         // Player Buffs (good for player)
         {"Super Charge!", "Fire rate doubled for this wave", EventType::PLAYER_BUFF, 0},
@@ -929,7 +1004,6 @@ void Game::GenerateRandomEvent() {
         {"Aggression!", "Enemies shoot 25% faster", EventType::ENEMY_BUFF, 0},
 
         // Player Debuffs (bad for player)
-        {"Gravity Well!", "Player moves 30% slower", EventType::PLAYER_DEBUFF, 0},
         {"Jammed!", "Fire rate reduced by 30%", EventType::PLAYER_DEBUFF, 0},
         {"Leaky Shield!", "Shield effectiveness -25%", EventType::PLAYER_DEBUFF, 0},
         {"Drought!", "-25% cash from enemies", EventType::PLAYER_DEBUFF, 0}

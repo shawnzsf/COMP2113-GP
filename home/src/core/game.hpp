@@ -44,6 +44,7 @@ public:
     bool BuyShield(int cost);
     int GetCash() const;
     WeaponType GetWeaponType() const;
+    void SetWeaponType(WeaponType type);
     bool HasShield() const;
     int GetShootCooldown() const;
     int GetMaxShootCooldown() const;
@@ -62,6 +63,7 @@ public:
 
     // Bullet type accessors
     BulletType GetBulletType() const;
+    void SetBulletType(BulletType type);
     bool CanUseBulletType(BulletType type) const;
     bool HasExplosive() const;
     bool HasPiercing() const;
@@ -70,6 +72,7 @@ public:
     bool BuyExplosiveBullet(int cost);
     bool BuyPiercingBullet(int cost);
     bool UpgradeBasicBulletDamage(int cost);
+    bool UpgradeBasicBulletSpeed(int cost);
     bool UpgradeExplosiveDamage(int cost);
     bool UpgradeExplosiveRadius(int cost);
     bool UpgradePiercingDamage(int cost);
@@ -128,6 +131,7 @@ private:
     static constexpr int POINTS_REGULAR_ENEMY = 10;
     static constexpr int POINTS_ELITE_ENEMY = 30;
     static constexpr int POINTS_BOSS_ENEMY = 100;
+    static constexpr int POINTS_DROPSHIP_ENEMY = 500;
 
     // Get difficulty multiplier (increases every 5 waves)
     int GetDifficultyMultiplier() const { return 1 + (wave / 5); }
@@ -153,6 +157,8 @@ private:
     // Player upgrades and currency
     int cash = 0;
     WeaponType weapon_type = WeaponType::BASIC;
+    bool has_dual_weapon = false;
+    bool has_tri_weapon = false;
     
     // Upgrade tracking
     bool has_rapid_fire = false;
@@ -170,9 +176,9 @@ private:
 
     // Bullet upgrade stats
     int basic_bullet_damage = 1;
-    int explosive_bullet_damage = 3;
-    int explosive_bullet_radius = 2;
-    int piercing_bullet_damage = 1;
+    int explosive_bullet_damage = 1;
+    int explosive_bullet_radius = 1;
+    int piercing_bullet_damage = 2;
     int piercing_bullet_penetration = 2;
     int piercing_bullet_speed = 4;
 
