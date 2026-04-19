@@ -137,6 +137,14 @@ private:
     static constexpr int POINTS_BOSS_ENEMY = 100;
     static constexpr int POINTS_DROPSHIP_ENEMY = 500;
 
+    // Cash gained
+    static constexpr int CASH_REGULAR_ENEMY = 5;
+    static constexpr int CASH_ELITE_ENEMY = 10;
+    static constexpr int CASH_BOSS_ENEMY = 20;
+    static constexpr int CASH_CIRCLE_SHOOTER = 15;
+    static constexpr int CASH_MEGABOSS = 50;
+    static constexpr int CASH_DROPSHIP_ENEMY = 100;
+
     // Get difficulty multiplier (increases every 5 waves)
     int GetDifficultyMultiplier() const { return 1 + (wave / 5); }
     int GetDifficultyLevel() const { return wave / 5; }

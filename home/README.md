@@ -4,6 +4,12 @@
    <span>COMP2113 Group Project</span>
 </p>
 
+<p align="center">
+   <img src="data/menu.png" alt="Logo of the game."/>
+   <br/>
+   <span> COMP2113 Group Presents (2025/26 Spring Semester)</span>
+</p>
+
 ## Team Members
 
 - **SHAWN ZHANG** (u3653854@connect.hku.hk)

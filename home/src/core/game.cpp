@@ -41,8 +41,8 @@ void Game::SpawnEnemies() {
     enemies.clear();
 
     // Toughness system: each wave has a fixed toughness value
-    int base_toughness = 5;
-    int wave_toughness = base_toughness + (wave - 1) * 3;  // Toughness increases by 3 each wave
+    int base_toughness = 2;
+    int wave_toughness = base_toughness + (wave - 1) * 2;  // Toughness increases by 2 each wave
 
     // Enemy toughness costs
     const int REGULAR_COST = 1;
@@ -79,8 +79,8 @@ void Game::SpawnEnemies() {
         available_enemies.push_back({EnemyType::DROPSHIP, DROPSHIP_COST});
     }
 
-    // Calculate difficulty multiplier (HP scales faster - every 4 waves +1 HP)
-    int difficulty_multiplier = 1 + (wave / 4);
+    // Calculate difficulty multiplier (HP scales faster - every 3 waves +1 HP)
+    int difficulty_multiplier = 1 + (wave / 3);
     // Apply difficulty level HP multiplier
     difficulty_multiplier = static_cast<int>(difficulty_multiplier * GetEnemyHealthMultiplier());
 
@@ -94,7 +94,7 @@ void Game::SpawnEnemies() {
     std::vector<Position> positions;
 
     // Generate potential positions
-    int max_enemies = 20;
+    int max_enemies = 30;
     int start_x = (WIDTH - (max_enemies * 4)) / 2;
     for (int i = 0; i < max_enemies; i++) {
         positions.push_back({start_x + (i * 4), 3 + (i / 5) * 3});
@@ -206,6 +206,7 @@ bool Game::HandleEvent(const ftxui::Event& event) {
     // Handle weapon switching
     if (event == ftxui::Event::Character('z') || event == ftxui::Event::Character('Z')) {
         weapon_type = WeaponType::BASIC;
+        current_weapon = CreateWeapon(weapon_type);
         // If current bullet type is not allowed, switch to normal
         if (!CanUseBulletType(current_bullet_type)) {
             current_bullet_type = BulletType::NORMAL;
@@ -215,6 +216,7 @@ bool Game::HandleEvent(const ftxui::Event& event) {
     if (event == ftxui::Event::Character('x') || event == ftxui::Event::Character('X')) {
         if (has_dual_weapon) {
             weapon_type = WeaponType::DUAL;
+            current_weapon = CreateWeapon(weapon_type);
             if (!CanUseBulletType(current_bullet_type)) {
                 current_bullet_type = BulletType::NORMAL;
             }
@@ -224,6 +226,7 @@ bool Game::HandleEvent(const ftxui::Event& event) {
     if (event == ftxui::Event::Character('c') || event == ftxui::Event::Character('C')) {
         if (has_tri_weapon) {
             weapon_type = WeaponType::TRI;
+            current_weapon = CreateWeapon(weapon_type);
             if (!CanUseBulletType(current_bullet_type)) {
                 current_bullet_type = BulletType::NORMAL;
             }
@@ -522,12 +525,12 @@ void Game::CheckCollisions() {
                     // Award points if enemy destroyed
                     if (!e.IsAlive()) {
                         switch (e.type) {
-                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += static_cast<int>(2 * cash_multiplier_cache); break;
-                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += static_cast<int>(5 * cash_multiplier_cache); break;
-                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += static_cast<int>(15 * cash_multiplier_cache); break;
-                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += static_cast<int>(5 * cash_multiplier_cache); break;
-                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += static_cast<int>(30 * cash_multiplier_cache); break;
-                            case EnemyType::DROPSHIP: score += POINTS_DROPSHIP_ENEMY * difficulty; cash += static_cast<int>(50 * cash_multiplier_cache); break;
+                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += static_cast<int>(CASH_REGULAR_ENEMY * cash_multiplier_cache); break;
+                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += static_cast<int>(CASH_ELITE_ENEMY * cash_multiplier_cache); break;
+                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += static_cast<int>(CASH_BOSS_ENEMY * cash_multiplier_cache); break;
+                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += static_cast<int>(CASH_CIRCLE_SHOOTER * cash_multiplier_cache); break;
+                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += static_cast<int>(CASH_MEGABOSS * cash_multiplier_cache); break;
+                            case EnemyType::DROPSHIP: score += POINTS_DROPSHIP_ENEMY * difficulty; cash += static_cast<int>(CASH_DROPSHIP_ENEMY * cash_multiplier_cache); break;
                         }
                     }
                 } else {
@@ -536,12 +539,12 @@ void Game::CheckCollisions() {
                     b.active = false;
                     if (!e.IsAlive()) {
                         switch (e.type) {
-                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += static_cast<int>(2 * cash_multiplier_cache); break;
-                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += static_cast<int>(5 * cash_multiplier_cache); break;
-                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += static_cast<int>(15 * cash_multiplier_cache); break;
-                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += static_cast<int>(5 * cash_multiplier_cache); break;
-                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += static_cast<int>(30 * cash_multiplier_cache); break;
-                            case EnemyType::DROPSHIP: score += POINTS_DROPSHIP_ENEMY * difficulty; cash += static_cast<int>(50 * cash_multiplier_cache); break;
+                            case EnemyType::REGULAR: score += POINTS_REGULAR_ENEMY * difficulty; cash += static_cast<int>(CASH_REGULAR_ENEMY * cash_multiplier_cache); break;
+                            case EnemyType::ELITE: score += POINTS_ELITE_ENEMY * difficulty; cash += static_cast<int>(CASH_ELITE_ENEMY * cash_multiplier_cache); break;
+                            case EnemyType::BOSS: score += POINTS_BOSS_ENEMY * difficulty; cash += static_cast<int>(CASH_BOSS_ENEMY * cash_multiplier_cache); break;
+                            case EnemyType::CIRCLE_SHOOTER: score += 60 * difficulty; cash += static_cast<int>(CASH_CIRCLE_SHOOTER * cash_multiplier_cache); break;
+                            case EnemyType::MEGABOSS: score += 200 * difficulty; cash += static_cast<int>(CASH_MEGABOSS * cash_multiplier_cache); break;
+                            case EnemyType::DROPSHIP: score += POINTS_DROPSHIP_ENEMY * difficulty; cash += static_cast<int>(CASH_DROPSHIP_ENEMY * cash_multiplier_cache); break;
                         }
                     }
                 }
@@ -553,8 +556,8 @@ void Game::CheckCollisions() {
 
     // Check collisions between enemy bullets and player
     for (auto& e : enemies) {
-        if (e.type == EnemyType::BOSS || e.type == EnemyType::CIRCLE_SHOOTER || e.type == EnemyType::MEGABOSS) {
-            for (const auto& enemy_bullet : e.bullets) {
+        if (e.type == EnemyType::BOSS || e.type == EnemyType::CIRCLE_SHOOTER || e.type == EnemyType::MEGABOSS || e.type == EnemyType::DROPSHIP) {
+            for (auto& enemy_bullet : e.bullets) {
                 if (!enemy_bullet.active) continue;
 
                 Position player_pos = player.GetPosition();
@@ -563,13 +566,15 @@ void Game::CheckCollisions() {
                     std::abs(static_cast<float>(enemy_bullet.pos.y - player_pos.y)) <= bullet_radius) {
 
                     // Apply enemy damage multiplier
-                    int damage_to_player = static_cast<int>(1 * GetEnemyDamageMultiplier());
+                    int damage_to_player = std::max(1, static_cast<int>(1 * GetEnemyDamageMultiplier()));
                     player.TakeDamage(damage_to_player);
+                    enemy_bullet.active = false;
 
                     if (!player.IsAlive()) {
                         game_over = true;
                         return;
                     }
+                    break;
                 }
             }
         }
@@ -674,13 +679,9 @@ bool Game::BuyWeapon(WeaponType type, int cost) {
         return false;
     }
     cash -= cost;
-    weapon_type = type;
     if (type == WeaponType::DUAL) has_dual_weapon = true;
     if (type == WeaponType::TRI) has_tri_weapon = true;
-    // If current bullet type is not allowed with new weapon, switch to normal
-    if (!CanUseBulletType(current_bullet_type)) {
-        current_bullet_type = BulletType::NORMAL;
-    }
+    SetWeaponType(type);
     return true;
 }
 
@@ -721,9 +722,9 @@ DifficultyLevel Game::GetDifficulty() const {
 // Get difficulty modifiers based on selected difficulty level
 float Game::GetCashRewardMultiplier() const {
     switch (difficulty) {
-        case DifficultyLevel::Easy:    return 1.5f;   // 50% more cash
-        case DifficultyLevel::Medium:  return 1.0f;   // Normal
-        case DifficultyLevel::Hard:   return 0.7f;   // 30% less cash
+        case DifficultyLevel::Easy:    return 2.0f;   // 100% more cash
+        case DifficultyLevel::Medium:  return 1.5f;   // 150% more cash
+        case DifficultyLevel::Hard:   return 1.0f;   // Normal
     }
     return 1.0f;
 }
@@ -731,7 +732,7 @@ float Game::GetCashRewardMultiplier() const {
 float Game::GetEnemyDamageMultiplier() const {
     switch (difficulty) {
         case DifficultyLevel::Easy:    return 0.7f;   // 30% less damage
-        case DifficultyLevel::Medium:  return 1.0f;   // Normal
+        case DifficultyLevel::Medium:  return 0.9f;   // Slightly easier
         case DifficultyLevel::Hard:   return 1.5f;   // 50% more damage
     }
     return 1.0f;
@@ -740,7 +741,7 @@ float Game::GetEnemyDamageMultiplier() const {
 float Game::GetEnemyHealthMultiplier() const {
     switch (difficulty) {
         case DifficultyLevel::Easy:    return 0.7f;   // 30% less HP
-        case DifficultyLevel::Medium:  return 1.0f;   // Normal
+        case DifficultyLevel::Medium:  return 0.9f;   // Slightly easier
         case DifficultyLevel::Hard:   return 1.5f;   // 50% more HP
     }
     return 1.0f;
@@ -748,8 +749,8 @@ float Game::GetEnemyHealthMultiplier() const {
 
 float Game::GetToughnessMultiplier() const {
     switch (difficulty) {
-        case DifficultyLevel::Easy:    return 0.7f;   // 30% less toughness (fewer enemies)
-        case DifficultyLevel::Medium:  return 1.0f;   // Normal
+        case DifficultyLevel::Easy:    return 0.5f;   // Much fewer enemies
+        case DifficultyLevel::Medium:  return 0.7f;   // Fewer enemies
         case DifficultyLevel::Hard:   return 1.4f;   // 40% more toughness (more enemies)
     }
     return 1.0f;
@@ -904,7 +905,7 @@ bool Game::BuySpeedBoost(int cost) {
 bool Game::BuyHealthPack(int cost) {
     if (!CanAfford(cost)) return false;
     cash -= cost;
-    player.TakeDamage(-1);  // Negative damage = heal
+    player.TakeDamage(-1);  // Negative damage = healfr
     return true;
 }
 

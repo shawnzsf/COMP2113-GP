@@ -27,18 +27,18 @@ std::vector<Bullet> BasicWeapon::Fire(Position player_pos, BulletType bullet_typ
     return bullets;
 }
 
-// Dual weapon fire - two bullets (left and right)
+// Dual weapon fire - two bullets (side by side)
 // Inputs: Position, BulletType, int damage | Outputs: std::vector<Bullet>
 std::vector<Bullet> DualWeapon::Fire(Position player_pos, BulletType bullet_type, int damage) {
     std::vector<Bullet> bullets;
     // Left bullet
     Position left_pos = {player_pos.x, player_pos.y - 1};
+    Position right_pos = {player_pos.x + 2, player_pos.y - 1};
     Bullet left = CreateBasicBullet(left_pos, bullet_type, damage);
     left.dx = -1;
     bullets.push_back(left);
 
     // Right bullet
-    Position right_pos = {player_pos.x + 2, player_pos.y - 1};
     Bullet right = CreateBasicBullet(right_pos, bullet_type, damage);
     right.dx = 1;
     bullets.push_back(right);
