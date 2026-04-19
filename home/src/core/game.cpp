@@ -82,7 +82,7 @@ void Game::SpawnEnemies() {
     // Calculate difficulty multiplier (HP scales faster - every 3 waves +1 HP)
     int difficulty_multiplier = 1 + (wave / 3);
     // Apply difficulty level HP multiplier
-    difficulty_multiplier = static_cast<int>(difficulty_multiplier * GetEnemyHealthMultiplier());
+    difficulty_multiplier = std::max(static_cast<int>(difficulty_multiplier * GetEnemyHealthMultiplier()), 1);
 
     // Cash reward multiplier - decreases over time, then apply difficulty level
     float wave_cash_mult = std::max(0.3f, 1.0f - static_cast<float>(wave) * 0.03f);
@@ -93,11 +93,13 @@ void Game::SpawnEnemies() {
     int remaining_toughness = static_cast<int>(wave_toughness * GetToughnessMultiplier());
     std::vector<Position> positions;
 
-    // Generate potential positions
+    // Generate potential positions with randomized horizontal offset
     int max_enemies = 30;
     int start_x = (WIDTH - (max_enemies * 4)) / 2;
+    // Random offset between -25 and 25 for varied starting positions
+    int random_offset = (rand() % 50) - 25;
     for (int i = 0; i < max_enemies; i++) {
-        positions.push_back({start_x + (i * 4), 3 + (i / 5) * 3});
+        positions.push_back({start_x + (i * 4) + random_offset, 3 + (i / 5) * 3});
     }
 
     int pos_index = 0;
