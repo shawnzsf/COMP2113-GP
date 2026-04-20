@@ -235,6 +235,10 @@ bool Game::HandleEvent(const ftxui::Event& event) {
         }
         handled = true;
     }
+    if (event == ftxui::Event::Character('f') || event == ftxui::Event::Character('F')) {
+        ActivateFreeze();
+        return true;
+    }
 
     return handled;
 }
@@ -316,7 +320,8 @@ void Game::Update() {
     if (freeze_timer > 0) freeze_timer--;
 
     // Enemy descent (independent of movement)
-    if (frame_count % ENEMY_DESCENT_INTERVAL == 0) {
+    bool enemies_frozen = (freeze_timer > 0);
+    if (!enemies_frozen && frame_count % ENEMY_DESCENT_INTERVAL == 0) {
         for (auto& e : enemies) {
             if (e.alive && e.type != EnemyType::DROPSHIP) e.pos.y++;
         }
@@ -463,7 +468,9 @@ void Game::MoveEnemies() {
     // Update all enemies (this handles individual movement for elite/boss, and any other updates)
     Position player_pos = player.GetPosition();
     for (auto& e : enemies) {
-        e.Update(player_pos);
+        if(!enemies_frozen) {
+            e.Update(player_pos);
+        }
     }
 
     // Add spawned enemies
@@ -614,7 +621,7 @@ void Game::UpdateWave() {
 void Game::Draw(ftxui::Canvas& canvas) {
     // Draw border
     // for (int x = 0; x < WIDTH; ++x) {
-    //     canvas.DrawText(x, 0, "─", ftxui::Color::White);
+    //     canvas.DrfrawText(x, 0, "─", ftxui::Color::White);
     //     canvas.DrawText(x, HEIGHT - 1, "─", ftxui::Color::White);
     // }
     // for (int y = 1; y < HEIGHT - 1; ++y) {

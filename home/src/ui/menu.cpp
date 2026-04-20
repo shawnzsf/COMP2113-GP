@@ -99,6 +99,7 @@ Element MenuRenderer::RenderControls() {
     controls_elements.push_back(text(""));
 
     controls_elements.push_back(text("Weapons & Bullets:") | bold | color(Color::Cyan));
+    controls_elements.push_back(text("- F: Activate Freeze ability.") | color(Color::GrayLight));
     controls_elements.push_back(text("- Z/X/C: Switch between weapon types.") | color(Color::GrayLight));
     controls_elements.push_back(text("- 1/2/3: Switch bullet types (Basic, Explosive, Piercing).") | color(Color::GrayLight));
     controls_elements.push_back(text("- Explosive bullets cannot be used with Dual or Tri Shot weapons.") | color(Color::GrayLight));

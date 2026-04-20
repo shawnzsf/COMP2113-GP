@@ -120,6 +120,9 @@ ftxui::Element HUD::RenderWeaponInfo(const Game& game) const {
     if (game.GetDamageBoostTimer() > 0) {
         weapon_info.push_back(text("DMG UP") | color(Color::Red));
     }
+    if (game.GetFreezeTimer() > 0) {
+        weapon_info.push_back(text("ENEMIES FROZEN") | color(Color::Cyan));
+    }
 
     return vbox(std::move(weapon_info)) | center;
 }

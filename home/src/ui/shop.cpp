@@ -35,13 +35,13 @@ void Shop::InitializeItems() {
     // ITEMS (consumables - limited quantity, max 3 each)
     items.push_back({"Speed Boost", "+50% speed for 10 seconds", 30, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
     items.push_back({"Health Pack", "Restore 1 HP instantly", 40, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
-    items.push_back({"Shield Pack", "Shield for 30 seconds", 25, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
+    items.push_back({"Shield Pack", "Shield for 30 seconds", 25, ItemCategory::ITEM, false, true, 0, 1, 0, 0});
     items.push_back({"Damage Boost", "2x damage for 8 seconds", 25, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
 
     // ABILITIES (one-time purchase, upgradable - max level 3)
     items.push_back({"Shield Barrier", "Create a protective shield", 75, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
     items.push_back({"Rapid Fire", "Double your fire rate", 120, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
-    items.push_back({"Time Slow", "Slow down enemies temporarily", 150, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
+    // items.push_back({"Time Slow", "Slow down enemies temporarily", 150, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
     items.push_back({"Freeze", "Freeze all enemies for 5 seconds", 200, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
 }
 
@@ -76,6 +76,22 @@ bool Shop::CanPurchase(const ShopItem& item) const {
     if (item.max_upgrade_level > 0 && item.upgrade_level >= item.max_upgrade_level) {
         // Reached max upgrade level
         return false;
+    }
+    return true;
+}
+bool Shop::PurchaseItemByIndex(int global_index, int& cash) {
+    if (global_index < 0 || global_index >= (int)items.size()) return false;
+    ShopItem& item = items[global_index];
+    if (!CanAfford(item, cash) || !CanPurchase(item)) return false;
+    
+    cash -= item.cost;
+    if (item.can_stack) {
+        if (item.quantity < item.max_quantity) item.quantity++;
+    } else if (item.max_upgrade_level > 0) {
+        item.upgrade_level++;
+        item.owned = true;
+    } else {
+        item.owned = true;
     }
     return true;
 }

@@ -35,12 +35,29 @@ int main() {
     std::string player_name = "Player";
     bool paused = false;
 
-    // Shop state tracking
+    // Shop state tracking – store global index + copy of item for display
     ItemCategory current_shop_category = ItemCategory::WEAPON;
     int shop_selected_item = 0;
-    std::vector<ShopItem> current_shop_items = shop.GetItemsByCategory(current_shop_category);
+    std::vector<std::pair<int, ShopItem>> current_shop_items; // <global_index, item_copy>
 
-    // Submenu state for showing upgrade options
+    // Helper to refresh the displayed items from the original shop data
+    auto refresh_shop_items = [&]() {
+        current_shop_items.clear();
+        const auto& all = shop.GetAllItems();
+        for (size_t i = 0; i < all.size(); ++i) {
+            if (all[i].category == current_shop_category) {
+                current_shop_items.push_back({(int)i, all[i]});
+            }
+        }
+        // Keep selected index within bounds
+        if (shop_selected_item >= (int)current_shop_items.size())
+            shop_selected_item = std::max(0, (int)current_shop_items.size() - 1);
+    };
+
+    // Initial refresh
+    refresh_shop_items();
+
+    // Submenu state (unused now, kept for potential future expansion)
     bool in_upgrade_submenu = false;
     int upgrade_submenu_selected = 0;
     std::vector<std::string> upgrade_options;
@@ -77,8 +94,14 @@ int main() {
     auto game_renderer = Renderer([&] {
         // If paused, show full-screen shop
         if (paused) {
+            // Build a temporary vector of just the ShopItem parts for rendering
+            std::vector<ShopItem> render_items;
+            render_items.reserve(current_shop_items.size());
+            for (const auto& p : current_shop_items)
+                render_items.push_back(p.second);
+
             return shop_renderer.RenderShopOnly(game, shop, current_shop_category,
-                                    shop_selected_item, current_shop_items,
+                                    shop_selected_item, render_items,
                                     in_upgrade_submenu, upgrade_submenu_selected,
                                     upgrade_options, current_upgrade_item);
         }
@@ -96,7 +119,7 @@ int main() {
         Element combined_display = vbox({
             hud_display | size(HEIGHT, LESS_THAN, 9),
             separator(),
-            game_display | flex_grow,
+            game_display | center,
         });
 
         return combined_display;
@@ -184,55 +207,14 @@ int main() {
                     if (paused) {
                         // Reset shop to Weapons category when pausing
                         current_shop_category = ItemCategory::WEAPON;
-                        current_shop_items = shop.GetItemsByCategory(current_shop_category);
                         shop_selected_item = 0;
+                        refresh_shop_items();
                     }
                     return true;
                 }
 
                 if (paused) {
-                    // If in upgrade submenu, handle differently
-                    if (in_upgrade_submenu) {
-                        if (event == Event::ArrowUp) {
-                            upgrade_submenu_selected = (upgrade_submenu_selected - 1 + static_cast<int>(upgrade_options.size())) % static_cast<int>(upgrade_options.size());
-                            return true;
-                        }
-                        if (event == Event::ArrowDown) {
-                            upgrade_submenu_selected = (upgrade_submenu_selected + 1) % static_cast<int>(upgrade_options.size());
-                            return true;
-                        }
-                        if (event == Event::Return) {
-                            // Apply the selected upgrade
-                            int cost = 0;
-                            if (current_upgrade_item == "Basic Damage +1") {
-                                cost = 50;
-                                game.UpgradeBasicBulletDamage(cost);
-                            } else if (current_upgrade_item == "Basic Speed +1") {
-                                cost = 120;
-                                game.UpgradeBasicBulletSpeed(cost);
-                            } else if (current_upgrade_item == "Explosive Damage +1") {
-                                cost = 60;
-                                game.UpgradeExplosiveDamage(cost);
-                            } else if (current_upgrade_item == "Explosive Radius +1") {
-                                cost = 60;
-                                game.UpgradeExplosiveRadius(cost);
-                            } else if (current_upgrade_item == "Piercing Damage +1") {
-                                cost = 50;
-                                game.UpgradePiercingDamage(cost);
-                            } else if (current_upgrade_item == "Piercing Penetra. +1") {
-                                cost = 60;
-                                game.UpgradePiercingPenetration(cost);
-                            }
-                            in_upgrade_submenu = false;
-                            return true;
-                        }
-                        if (event == Event::Escape) {
-                            in_upgrade_submenu = false;
-                            upgrade_submenu_selected = 0;
-                            return true;
-                        }
-                        return true;
-                    }
+                    // No upgrade submenu for now – direct purchase handles upgrades
 
                     // Handle category switching with Left/Right arrows
                     if (event == Event::ArrowLeft) {
@@ -245,7 +227,7 @@ int main() {
                         } else {
                             current_shop_category = ItemCategory::ITEM;
                         }
-                        current_shop_items = shop.GetItemsByCategory(current_shop_category);
+                        refresh_shop_items();
                         shop_selected_item = 0;
                         return true;
                     }
@@ -259,137 +241,123 @@ int main() {
                         } else {
                             current_shop_category = ItemCategory::WEAPON;
                         }
-                        current_shop_items = shop.GetItemsByCategory(current_shop_category);
+                        refresh_shop_items();
                         shop_selected_item = 0;
                         return true;
                     }
 
                     // Handle item selection with Up/Down arrows
                     if (event == Event::ArrowUp) {
-                        shop_selected_item = (shop_selected_item - 1 + static_cast<int>(current_shop_items.size())) % static_cast<int>(current_shop_items.size());
+                        if (!current_shop_items.empty()) {
+                            shop_selected_item = (shop_selected_item - 1 + (int)current_shop_items.size()) % (int)current_shop_items.size();
+                        }
                         return true;
                     }
                     if (event == Event::ArrowDown) {
-                        shop_selected_item = (shop_selected_item + 1) % static_cast<int>(current_shop_items.size());
+                        if (!current_shop_items.empty()) {
+                            shop_selected_item = (shop_selected_item + 1) % (int)current_shop_items.size();
+                        }
                         return true;
                     }
 
-                    // Handle purchase with Enter
+                    // Handle purchase / activation with Enter
                     if (event == Event::Return) {
-                        if (!current_shop_items.empty() && shop_selected_item < static_cast<int>(current_shop_items.size())) {
-                            auto& item = current_shop_items[shop_selected_item];
-                            int cash = game.GetCash();
+                        if (current_shop_items.empty()) return true;
+                        auto& pair = current_shop_items[shop_selected_item];
+                        int global_index = pair.first;
+                        ShopItem& item_copy = pair.second; // copy for display, not for modification
+                        int cash = game.GetCash();
 
-                            // If item is owned, handle differently based on type
-                            if (item.owned) {
-                                if (item.category == ItemCategory::ABILITY) {
-                                    // Activate owned abilities
-                                    if (item.name == "Shield Barrier") {
-                                        game.BuyShield(item.cost);
-                                    } else if (item.name == "Rapid Fire") {
-                                        // Rapid fire is permanent once bought, but could be activated again
-                                    } else if (item.name == "Time Slow") {
-                                        game.ActivateTimeSlow();
-                                    } else if (item.name == "Freeze") {
-                                        game.ActivateFreeze();
-                                    }
-                                    return true;
-                                } else if (item.category == ItemCategory::WEAPON) {
-                                    // Switch to owned weapon
-                                    if (item.name == "Dual Shot") {
-                                        game.SetWeaponType(WeaponType::DUAL);
-                                    } else if (item.name == "Tri Shot") {
-                                        game.SetWeaponType(WeaponType::TRI);
-                                    }
-                                    // If current bullet type is not allowed, switch to normal
-                                    if (!game.CanUseBulletType(game.GetBulletType())) {
-                                        game.SetBulletType(BulletType::NORMAL);
-                                    }
-                                    return true;
+                        // If item is owned and not stackable, it's an activation (weapon switch or ability use)
+                        if (item_copy.owned && !item_copy.can_stack && item_copy.max_upgrade_level == 0) {
+                            // Activate owned weapon or ability
+                            if (item_copy.category == ItemCategory::WEAPON) {
+                                if (item_copy.name == "Dual Shot") {
+                                    game.SetWeaponType(WeaponType::DUAL);
+                                } else if (item_copy.name == "Tri Shot") {
+                                    game.SetWeaponType(WeaponType::TRI);
                                 }
-                                return true;  // Other owned items - nothing to do
+                                // If current bullet type is not allowed, switch to normal
+                                if (!game.CanUseBulletType(game.GetBulletType())) {
+                                    game.SetBulletType(BulletType::NORMAL);
+                                }
+                            } else if (item_copy.category == ItemCategory::ABILITY) {
+                                if (item_copy.name == "Shield Barrier") {
+                                    game.BuyShield(0); // already owned, just activate
+                                } else if (item_copy.name == "Rapid Fire") {
+                                    game.BuyRapidFire(0);
+                                } 
+                                
+                                // else if (item_copy.name == "Time Slow") {
+                                //     game.ActivateTimeSlow();   }
+                                
+                            }
+                            return true;
+                        }
+
+                        // Otherwise, attempt to purchase the item (or upgrade it)
+                        if (shop.PurchaseItemByIndex(global_index, cash)) {
+                            // Purchase succeeded – apply game-specific effects
+                            // The shop's internal item has been updated (quantity, upgrade_level, owned)
+                            // Now we need to apply the effect to the game (e.g., unlock bullet, give temporary boost, etc.)
+                            // Reload the fresh copy of the item to know what was bought
+                            const auto& all = shop.GetAllItems();
+                            const ShopItem& bought = all[global_index];
+
+                            if (bought.category == ItemCategory::WEAPON) {
+                                if (bought.name == "Dual Shot") {
+                                    game.BuyWeapon(WeaponType::DUAL, bought.cost);
+                                } else if (bought.name == "Tri Shot") {
+                                    game.BuyWeapon(WeaponType::TRI, bought.cost);
+                                }
+                            } else if (bought.category == ItemCategory::BULLET) {
+                                if (bought.name == "Unlock Explosive") {
+                                    game.BuyExplosiveBullet(bought.cost);
+                                } else if (bought.name == "Unlock Piercing") {
+                                    game.BuyPiercingBullet(bought.cost);
+                                } else if (bought.name == "Basic Damage +1") {
+                                    game.UpgradeBasicBulletDamage(bought.cost);
+                                } else if (bought.name == "Basic Speed +1") {
+                                    game.UpgradeBasicBulletSpeed(bought.cost);
+                                } else if (bought.name == "Explosive Damage +1") {
+                                    game.UpgradeExplosiveDamage(bought.cost);
+                                } else if (bought.name == "Explosive Radius +1") {
+                                    game.UpgradeExplosiveRadius(bought.cost);
+                                } else if (bought.name == "Piercing Damage +1") {
+                                    game.UpgradePiercingDamage(bought.cost);
+                                } else if (bought.name == "Piercing Penetra. +1") {
+                                    game.UpgradePiercingPenetration(bought.cost);
+                                }
+                            } else if (bought.category == ItemCategory::ITEM) {
+                                // Consumable items – apply immediate effect
+                                if (bought.name == "Speed Boost") {
+                                    game.BuySpeedBoost(bought.cost);
+                                } else if (bought.name == "Health Pack") {
+                                    game.BuyHealthPack(bought.cost);
+                                } else if (bought.name == "Shield Pack") {
+                                    game.BuyShieldPack(bought.cost);
+                                } else if (bought.name == "Damage Boost") {
+                                    game.BuyDamageBoost(bought.cost);
+                                }
+                            } else if (bought.category == ItemCategory::ABILITY) {
+                                if (bought.name == "Shield Barrier") {
+                                    game.BuyShield(bought.cost);
+                                } else if (bought.name == "Rapid Fire") {
+                                    game.BuyRapidFire(bought.cost);
+                                }
+                                // } else if (bought.name == "Time Slow") {
+                                //     game.BuyTimeSlow(bought.cost);
+                                // } 
+                                else if (bought.name == "Freeze") {
+                                    game.BuyFreeze(bought.cost);
+                                }
                             }
 
-                            // Handle bullet upgrades (can be purchased multiple times)
-                            if (item.category == ItemCategory::BULLET && item.can_stack) {
-                                // Show upgrade options for bullet upgrades
-                                current_upgrade_item = item.name;
-                                upgrade_options.clear();
-                                if (item.name == "Basic Damage +1") {
-                                    upgrade_options.push_back("+1 Damage (Cost: $50)");
-                                } else if (item.name == "Basic Speed +1") {
-                                    upgrade_options.push_back("+1 Speed (Cost: $120)");
-                                } else if (item.name == "Explosive Damage +1") {
-                                    if (!game.HasExplosive()) return true;  // Can't upgrade if not unlocked
-                                    upgrade_options.push_back("+1 Damage (Cost: $60)");
-                                } else if (item.name == "Explosive Radius +1") {
-                                    if (!game.HasExplosive()) return true;  // Can't upgrade if not unlocked
-                                    upgrade_options.push_back("+1 Radius (Cost: $60)");
-                                } else if (item.name == "Piercing Damage +1") {
-                                    if (!game.HasPiercing()) return true;  // Can't upgrade if not unlocked
-                                    upgrade_options.push_back("+1 Damage (Cost: $50)");
-                                } else if (item.name == "Piercing Penetra. +1") {
-                                    if (!game.HasPiercing()) return true;  // Can't upgrade if not unlocked
-                                    upgrade_options.push_back("+1 Penetration (Cost: $60)");
-                                }
-                                if (!upgrade_options.empty()) {
-                                    upgrade_options.push_back("CONFIRM UPGRADE");
-                                    in_upgrade_submenu = true;
-                                    upgrade_submenu_selected = 0;
-                                }
-                                return true;
-                            }
-
-                            // Not owned - try to buy
-                            if (shop.CanAfford(item, cash)) {
-                                // Handle different types of items
-                                if (item.category == ItemCategory::WEAPON) {
-                                    if (item.name == "Dual Shot") {
-                                        game.BuyWeapon(WeaponType::DUAL, item.cost);
-                                        item.owned = true;
-                                    } else if (item.name == "Tri Shot") {
-                                        game.BuyWeapon(WeaponType::TRI, item.cost);
-                                        item.owned = true;
-                                    }
-                                } else if (item.category == ItemCategory::BULLET) {
-                                    if (item.name == "Unlock Explosive") {
-                                        game.BuyExplosiveBullet(item.cost);
-                                        item.owned = true;
-                                    } else if (item.name == "Unlock Piercing") {
-                                        game.BuyPiercingBullet(item.cost);
-                                        item.owned = true;
-                                    }
-                                } else if (item.category == ItemCategory::ITEM) {
-                                    // One-time use items - apply immediately
-                                    if (item.name == "Speed Boost") {
-                                        game.BuySpeedBoost(item.cost);
-                                        item.quantity++;
-                                    } else if (item.name == "Health Pack") {
-                                        game.BuyHealthPack(item.cost);
-                                        item.quantity++;
-                                    } else if (item.name == "Shield Pack") {
-                                        game.BuyShieldPack(item.cost);
-                                        item.quantity++;
-                                    } else if (item.name == "Damage Boost") {
-                                        game.BuyDamageBoost(item.cost);
-                                        item.quantity++;
-                                    }
-                                } else if (item.category == ItemCategory::ABILITY) {
-                                    if (item.name == "Shield Barrier") {
-                                        game.BuyShield(item.cost);
-                                        item.owned = true;
-                                    } else if (item.name == "Rapid Fire") {
-                                        game.BuyRapidFire(item.cost);
-                                        item.owned = true;
-                                    } else if (item.name == "Time Slow") {
-                                        game.BuyTimeSlow(item.cost);
-                                        item.owned = true;
-                                    } else if (item.name == "Freeze") {
-                                        game.BuyFreeze(item.cost);
-                                        item.owned = true;
-                                    }
-                                }
-                            }
+                            // Refresh the displayed items to reflect updated quantities/owned flags
+                            refresh_shop_items();
+                            // Keep selection on the same logical item (may shift if item count changed)
+                            if (shop_selected_item >= (int)current_shop_items.size())
+                                shop_selected_item = std::max(0, (int)current_shop_items.size() - 1);
                         }
                         return true;
                     }
@@ -438,8 +406,11 @@ int main() {
                     }
                     current_state = GameState::Playing;
                     paused = false;
-                    shop_selected_item = 0;
                     game = Game();  // Reset game
+                    shop.Reset();   // Reset shop items for new game
+                    refresh_shop_items();
+                    shop_selected_item = 0;
+                    current_shop_category = ItemCategory::WEAPON;
                     return true;
                 }
                 if (event == Event::Escape) {
@@ -459,10 +430,12 @@ int main() {
                     // Restart game
                     game = Game();
                     shop.Reset();  // Reset shop items
+                    refresh_shop_items();
                     current_state = GameState::Playing;
+                    paused = false;
                     return true;
                 }
-                return false;  // Don't pass events to game when dead
+                return false;
             }
         }
 

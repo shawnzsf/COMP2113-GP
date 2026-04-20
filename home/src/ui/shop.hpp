@@ -38,6 +38,8 @@ public:
     // Check if item can be purchased (respects limits)
     bool CanPurchase(const ShopItem& item) const;
 
+    bool PurchaseItemByIndex(int global_index, int& cash);
+
     // Purchase an item
     bool PurchaseItem(ShopItem& item, int& cash);
     
