@@ -106,6 +106,7 @@ cmake ..
 cmake --build . -- -j4
 ./Shooter_game
 ```
+You may checkout to mac and build the project if some of the display looks wrong.
 
 ### Terminal Requirements
 Minimum terminal size: 107 x 39 characters
