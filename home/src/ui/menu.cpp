@@ -113,6 +113,7 @@ Element MenuRenderer::RenderControls() {
     controls_elements.push_back(text(""));
 
     controls_elements.push_back(text("Shop Controls:") | bold | color(Color::Cyan));
+    controls_elements.push_back(text("- Abilities can be purchased ONCE only and can turn the tide in an emergancy. Items can be purchased up to 10 times and provide a temporary boost.") | color(Color::GrayLight));
     controls_elements.push_back(text("- ← / → : Switch shop categories.") | color(Color::GrayLight));
     controls_elements.push_back(text("- ↑ / ↓ : Select item.") | color(Color::GrayLight));
     controls_elements.push_back(text("- ENTER : Buy or upgrade selected item.") | color(Color::GrayLight));

@@ -33,16 +33,16 @@ void Shop::InitializeItems() {
     items.push_back({"Piercing Penetra. +1", "Increase penetration count", 60, ItemCategory::BULLET, false, true, 0, 5, 0, 0});
 
     // ITEMS (consumables - limited quantity, max 3 each)
-    items.push_back({"Speed Boost", "+50% speed for 10 seconds", 30, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
-    items.push_back({"Health Pack", "Restore 1 HP instantly", 40, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
-    items.push_back({"Shield Pack", "Shield for 30 seconds", 25, ItemCategory::ITEM, false, true, 0, 1, 0, 0});
-    items.push_back({"Damage Boost", "2x damage for 8 seconds", 25, ItemCategory::ITEM, false, true, 0, 3, 0, 0});
+    items.push_back({"Speed Boost", "+50% speed for 10 seconds", 30, ItemCategory::ITEM, false, true, 0, 10, 0, 0});
+    items.push_back({"Health Pack", "Restore 1 HP instantly", 40, ItemCategory::ITEM, false, true, 0, 10, 0, 0});
+    items.push_back({"Shield Pack", "Shield for 30 seconds", 25, ItemCategory::ITEM, false, true, 0, 10, 0, 0});
+    items.push_back({"Damage Boost", "2x damage for 8 seconds", 25, ItemCategory::ITEM, false, true, 0, 10, 0, 0});
 
     // ABILITIES (one-time purchase, upgradable - max level 3)
-    items.push_back({"Shield Barrier", "Create a protective shield", 75, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
-    items.push_back({"Rapid Fire", "Double your fire rate", 120, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
+    items.push_back({"Shield Barrier", "Create a protective shield", 75, ItemCategory::ABILITY, false, false, 0, 1, 0, 1});
+    items.push_back({"Rapid Fire", "Double your fire rate", 120, ItemCategory::ABILITY, false, false, 0, 1, 0, 1});
     // items.push_back({"Time Slow", "Slow down enemies temporarily", 150, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
-    items.push_back({"Freeze", "Freeze all enemies for 5 seconds", 200, ItemCategory::ABILITY, false, false, 0, 1, 0, 3});
+    items.push_back({"Freeze", "Freeze all enemies for 5 seconds", 200, ItemCategory::ABILITY, false, false, 0, 1, 0, 1});
 }
 
 const std::vector<ShopItem>& Shop::GetAllItems() const {

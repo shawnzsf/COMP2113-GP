@@ -84,7 +84,7 @@ Element ShopRenderer::Render(Game& game, Shop& shop, ItemCategory category,
                     item_color = Color::Green;
                     is_selectable = false;
                 } else {
-                    status_text = " [Lv." + std::to_string(item.upgrade_level) + "/" + std::to_string(item.max_upgrade_level) + "]";
+                    status_text = " [x" + std::to_string(item.upgrade_level) + "/" + std::to_string(item.max_upgrade_level) + "]";
                     item_color = Color::Cyan;
                 }
             } else if ((item.owned || item.can_stack) && item.quantity > 0) {
@@ -225,7 +225,7 @@ Element ShopRenderer::RenderShopOnly(Game& game, Shop& shop, ItemCategory catego
                         item_color = Color::Green;
                         is_selectable = false;
                     } else {
-                        status_text = " [Lv." + std::to_string(item.upgrade_level) + "/" + std::to_string(item.max_upgrade_level) + "]";
+                        status_text = " [x" + std::to_string(item.upgrade_level) + "/" + std::to_string(item.max_upgrade_level) + "]";
                         item_color = Color::Cyan;
                     }
                 } else if ((item.owned || item.can_stack) && item.quantity > 0) {
