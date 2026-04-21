@@ -28,7 +28,7 @@ void Player::Update() {
 // Inputs: ftxui::Canvas& canvas | Outputs: None
 void Player::Draw(ftxui::Canvas& canvas) const {
     // Draw Player (ship that can move in all directions)
-    std::string player_symbol = shield_active ? "⛊" : "🛦";
+    std::string player_symbol = shield_active ? "⛊" : "▲";
     canvas.DrawText(pos.x, pos.y, player_symbol, ftxui::Color::Cyan);
 }
 
